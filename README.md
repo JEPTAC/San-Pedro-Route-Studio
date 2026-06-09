@@ -1,29 +1,17 @@
-# San Pedro Route Studio
+# San Pedro Route Studio - Versión fluida
 
-Aplicación HTML estática para GitHub Pages.
+Versión optimizada para GitHub Pages.
 
-## Cómo publicar en GitHub Pages
+## Mejoras de fluidez
 
-1. Crea un repositorio nuevo.
-2. Sube el archivo `index.html` a la raíz del repositorio.
-3. En GitHub, entra a Settings > Pages.
-4. Selecciona la rama principal y la carpeta root.
-5. Abre la URL de GitHub Pages.
+- Movimiento del marcador desacoplado de la cámara.
+- Cámara suavizada y menos recarga de mosaicos.
+- Métricas de ruta precalculadas.
+- Actualización de progreso de ruta optimizada.
+- Zoom de grabación recomendado en 16.
+- Grabación WebM con bitrate definido.
+- Modo rendimiento activado por defecto.
 
-## Funciones incluidas
+## Publicación
 
-- Vista satelital realista con etiquetas.
-- Bloqueo de zoom máximo seguro para evitar mosaicos vacíos.
-- Búsqueda de direcciones y coordenadas.
-- Agregar paradas con búsqueda o clic.
-- Reordenar paradas.
-- Calcular ruta desde el Colegio José Antonio Aguilera.
-- Animación tipo Strava del recorrido.
-- Grabación WebM mediante captura de pantalla del navegador.
-- Exportación GeoJSON, GPX y KML.
-- Guardado local en el navegador.
-- Enlace compartible con coordenadas en la URL.
-
-## Backend
-
-No requiere Supabase ni Firebase para esta versión. Es 100% estática.
+Sube `index.html` a la raíz de tu repositorio y activa GitHub Pages.
