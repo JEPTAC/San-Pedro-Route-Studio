@@ -1,17 +1,12 @@
-# San Pedro Route Studio - Versión fluida
+# San Pedro Route Studio - Grabación limpia
 
-Versión optimizada para GitHub Pages.
+Versión para GitHub Pages con modo de grabación limpio.
 
-## Mejoras de fluidez
-
-- Movimiento del marcador desacoplado de la cámara.
-- Cámara suavizada y menos recarga de mosaicos.
-- Métricas de ruta precalculadas.
-- Actualización de progreso de ruta optimizada.
-- Zoom de grabación recomendado en 16.
-- Grabación WebM con bitrate definido.
-- Modo rendimiento activado por defecto.
+## Novedad principal
+Cuando se usa el botón **Grabar WebM**, la interfaz se oculta y en el video solo quedan visibles:
+- el mapa
+- la ruta y el cursor/runner
+- el contador de kilómetros recorridos
 
 ## Publicación
-
-Sube `index.html` a la raíz de tu repositorio y activa GitHub Pages.
+Sube `index.html` a la raíz del repositorio y activa GitHub Pages.
