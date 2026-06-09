@@ -1,7 +1,7 @@
 {
-  "name": "San Pedro Route Studio Universal",
+  "name": "San Pedro Route Studio Maps UI",
   "short_name": "San Pedro Route",
-  "description": "Versión con preferencia de captura de pestaña actual para grabación limpia.",
+  "description": "Interfaz móvil tipo app de mapas para iOS y Android.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
