@@ -1,0 +1,2920 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="theme-color" content="#071f43" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="San Pedro Route" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="assets/logo-san-pedro.png" />
+  <link rel="icon" href="assets/logo-san-pedro.png" />
+  <title>San Pedro Route Studio · Recorrido fluido</title>
+
+  <link rel="preconnect" href="https://unpkg.com" crossorigin>
+  <link rel="preconnect" href="https://server.arcgisonline.com" crossorigin>
+  <link rel="preconnect" href="https://router.project-osrm.org" crossorigin>
+  <link rel="preconnect" href="https://nominatim.openstreetmap.org" crossorigin>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+  <style>
+    :root {
+      --navy:#071f43;
+      --navy2:#0a336d;
+      --blue:#0b6ff5;
+      --cyan:#27d7ff;
+      --gold:#ffc400;
+      --orange:#ff7a18;
+      --red:#e93545;
+      --green:#19a463;
+      --white:#ffffff;
+      --ink:#142544;
+      --muted:#60718d;
+      --panel:rgba(255,255,255,.94);
+      --panel-strong:rgba(255,255,255,.98);
+      --border:rgba(219,232,247,.95);
+      --shadow:0 24px 70px rgba(4,23,51,.26);
+      --shadow2:0 12px 34px rgba(4,23,51,.18);
+      --radius:28px;
+    }
+
+    * { box-sizing:border-box; }
+
+    html, body {
+      width:100%;
+      height:100%;
+      margin:0;
+      overflow:hidden;
+      font-family:"Century Gothic","Segoe UI",Arial,sans-serif;
+      color:var(--ink);
+      background:#d9e6f2;
+    }
+
+    #app, #map {
+      position:fixed;
+      inset:0;
+      width:100vw;
+      height:100vh;
+    }
+
+    #map {
+      z-index:1;
+      background:#d9e6f2;
+    }
+
+    .leaflet-container {
+      width:100% !important;
+      height:100% !important;
+      font-family:"Century Gothic","Segoe UI",Arial,sans-serif;
+      background:#d9e6f2;
+    }
+
+    .leaflet-tile {
+      will-change:transform;
+      image-rendering:auto;
+    }
+
+    .brand-shell {
+      position:absolute;
+      z-index:930;
+      left:18px;
+      top:16px;
+      display:flex;
+      align-items:center;
+      gap:12px;
+      padding:11px 13px;
+      border-radius:26px;
+      background:var(--panel-strong);
+      border:1px solid var(--border);
+      box-shadow:var(--shadow2);
+      backdrop-filter:blur(14px);
+      max-width:min(650px, calc(100vw - 36px));
+    }
+
+    .brand-logos {
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex:0 0 auto;
+    }
+
+    .brand-logos img {
+      display:block;
+      max-height:54px;
+      max-width:132px;
+      object-fit:contain;
+      filter:drop-shadow(0 6px 10px rgba(4,23,51,.12));
+    }
+
+    .brand-text {
+      min-width:0;
+      border-left:1px solid #e0ecf8;
+      padding-left:12px;
+    }
+
+    .brand-text strong {
+      display:block;
+      font-size:15px;
+      line-height:1.1;
+      color:var(--navy);
+      letter-spacing:-.02em;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    .brand-text span {
+      display:block;
+      font-size:11px;
+      color:#63748f;
+      margin-top:3px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    .searchbar {
+      position:absolute;
+      z-index:925;
+      left:50%;
+      top:16px;
+      transform:translateX(-50%);
+      width:min(760px, calc(100vw - 520px));
+      min-width:380px;
+      display:grid;
+      grid-template-columns:1fr auto auto;
+      gap:10px;
+      padding:12px;
+      border-radius:26px;
+      background:var(--panel);
+      border:1px solid var(--border);
+      box-shadow:var(--shadow2);
+      backdrop-filter:blur(14px);
+    }
+
+    .searchbar input {
+      height:48px;
+      min-width:0;
+      border:1px solid #c8daee;
+      border-radius:17px;
+      padding:0 16px;
+      outline:none;
+      font-size:14px;
+      background:#fff;
+      color:#152640;
+    }
+
+    .searchbar input:focus {
+      border-color:#2e82e9;
+      box-shadow:0 0 0 4px rgba(46,130,233,.14);
+    }
+
+    button {
+      height:48px;
+      border:1px solid #c8daee;
+      border-radius:17px;
+      padding:0 15px;
+      font-family:inherit;
+      font-weight:900;
+      cursor:pointer;
+      color:#09234c;
+      background:#edf5ff;
+      transition:.18s ease;
+      white-space:nowrap;
+      letter-spacing:-.01em;
+    }
+
+    button:hover { transform:translateY(-1px); filter:brightness(.985); }
+    button:active { transform:translateY(0); }
+    button:disabled { opacity:.52; cursor:not-allowed; transform:none; }
+
+    button.primary {
+      background:linear-gradient(135deg,#ffe071,#ffc000);
+      border-color:#ffbd00;
+      color:#0c2348;
+    }
+
+    button.dark {
+      background:linear-gradient(135deg,#0d3978,#061a38);
+      border-color:#0b2c5f;
+      color:#fff;
+    }
+
+    button.strava {
+      background:linear-gradient(135deg,#ff9537,#fc4c02);
+      border-color:#fc4c02;
+      color:#fff;
+    }
+
+    button.success {
+      background:linear-gradient(135deg,#23ba6e,#137845);
+      border-color:#167344;
+      color:#fff;
+    }
+
+    button.danger {
+      background:#fff1ef;
+      border-color:#ffc9c4;
+      color:#9b1c12;
+    }
+
+    .panel {
+      position:absolute;
+      z-index:890;
+      right:18px;
+      top:96px;
+      width:410px;
+      max-height:calc(100vh - 114px);
+      overflow:auto;
+      padding:16px;
+      border-radius:30px;
+      background:var(--panel);
+      border:1px solid var(--border);
+      box-shadow:var(--shadow);
+      backdrop-filter:blur(16px);
+    }
+
+    .panel::-webkit-scrollbar { width:8px; }
+    .panel::-webkit-scrollbar-thumb { background:#c8d8ec; border-radius:99px; }
+
+    .panel h1 {
+      margin:0 0 4px;
+      font-size:20px;
+      color:var(--navy);
+      letter-spacing:-.03em;
+    }
+
+    .panel p {
+      margin:0 0 13px;
+      font-size:12px;
+      line-height:1.45;
+      color:#62728d;
+    }
+
+    .pill {
+      display:inline-flex;
+      align-items:center;
+      gap:7px;
+      height:29px;
+      padding:0 10px;
+      border-radius:999px;
+      background:#eef6ff;
+      border:1px solid #d5e9ff;
+      color:#24496f;
+      font-size:11px;
+      font-weight:900;
+      margin-bottom:10px;
+    }
+
+    .activity-card {
+      border-radius:24px;
+      overflow:hidden;
+      background:
+        radial-gradient(circle at 20% 15%, rgba(39,215,255,.24), transparent 34%),
+        radial-gradient(circle at 80% 10%, rgba(255,196,0,.25), transparent 30%),
+        linear-gradient(145deg,#071f43,#0d3978 58%,#0a2858);
+      color:#fff;
+      box-shadow:0 18px 40px rgba(7,31,67,.28);
+      margin:12px 0;
+      position:relative;
+    }
+
+    .activity-card::after {
+      content:"";
+      position:absolute;
+      inset:0;
+      background:linear-gradient(90deg, transparent, rgba(255,255,255,.10), transparent);
+      transform:translateX(-100%);
+      animation:sheen 5.6s ease-in-out infinite;
+      pointer-events:none;
+    }
+
+    @keyframes sheen {
+      0%,50% { transform:translateX(-100%); }
+      78%,100% { transform:translateX(100%); }
+    }
+
+    .activity-header {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding:14px 14px 4px;
+    }
+
+    .activity-header strong {
+      font-size:14px;
+      line-height:1.15;
+    }
+
+    .activity-header span {
+      font-size:11px;
+      color:rgba(255,255,255,.75);
+    }
+
+    .stats {
+      display:grid;
+      grid-template-columns:repeat(3, 1fr);
+      gap:1px;
+      background:rgba(255,255,255,.12);
+      margin:12px 14px 14px;
+      border-radius:18px;
+      overflow:hidden;
+    }
+
+    .stat {
+      padding:11px 9px;
+      background:rgba(255,255,255,.08);
+      text-align:center;
+    }
+
+    .stat b {
+      display:block;
+      font-size:18px;
+      color:#fff;
+      letter-spacing:-.03em;
+    }
+
+    .stat small {
+      display:block;
+      font-size:10px;
+      color:rgba(255,255,255,.72);
+      margin-top:2px;
+    }
+
+    .progress-wrap {
+      padding:0 14px 14px;
+    }
+
+    .progress-label {
+      display:flex;
+      justify-content:space-between;
+      font-size:10px;
+      color:rgba(255,255,255,.75);
+      margin-bottom:6px;
+      font-weight:800;
+    }
+
+    .progress {
+      height:10px;
+      border-radius:999px;
+      background:rgba(255,255,255,.18);
+      overflow:hidden;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);
+    }
+
+    .progress > span {
+      display:block;
+      height:100%;
+      width:0%;
+      border-radius:999px;
+      background:linear-gradient(90deg,#ffcf33,#ff7a18,#fc4c02);
+      box-shadow:0 0 18px rgba(252,76,2,.55);
+      transition:width .12s linear;
+    }
+
+    .section-title {
+      margin:16px 0 8px;
+      font-size:11px;
+      color:var(--navy);
+      font-weight:900;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+
+    .status {
+      margin:10px 0 14px;
+      padding:10px 12px;
+      border-radius:18px;
+      background:#eef6ff;
+      border:1px solid #d4e8ff;
+      font-size:12px;
+      line-height:1.35;
+      color:#24476f;
+    }
+
+    .grid2 {
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:8px;
+      margin:10px 0;
+    }
+
+    .grid2 button, .grid3 button {
+      height:42px;
+      font-size:12px;
+      border-radius:15px;
+      padding:0 9px;
+    }
+
+    .grid3 {
+      display:grid;
+      grid-template-columns:repeat(3, 1fr);
+      gap:8px;
+      margin:10px 0;
+    }
+
+    .video-box {
+      display:grid;
+      gap:9px;
+      border:1px solid #dfe9f6;
+      background:#f8fbff;
+      border-radius:22px;
+      padding:11px;
+    }
+
+    .slider-box {
+      display:grid;
+      grid-template-columns:75px 1fr 45px;
+      gap:9px;
+      align-items:center;
+      font-size:12px;
+      color:#5c6a82;
+    }
+
+    input[type="range"] {
+      width:100%;
+      accent-color:#fc4c02;
+    }
+
+    .toggle-row {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding:9px 10px;
+      border-radius:16px;
+      background:#fff;
+      border:1px solid #e1ebf7;
+      font-size:12px;
+      font-weight:800;
+      color:#263a59;
+    }
+
+    .toggle {
+      width:46px;
+      height:26px;
+      border-radius:999px;
+      padding:3px;
+      background:#d8e4f2;
+      cursor:pointer;
+      flex:0 0 auto;
+    }
+
+    .toggle span {
+      display:block;
+      width:20px;
+      height:20px;
+      border-radius:50%;
+      background:#fff;
+      box-shadow:0 3px 8px rgba(4,23,51,.18);
+      transition:.18s ease;
+    }
+
+    .toggle.on {
+      background:linear-gradient(135deg,#ff9537,#fc4c02);
+    }
+
+    .toggle.on span {
+      transform:translateX(20px);
+    }
+
+    .stops {
+      display:grid;
+      gap:8px;
+      margin-top:10px;
+    }
+
+    .stop-card {
+      padding:10px 10px 10px 12px;
+      border-radius:18px;
+      border:1px solid #dfe9f6;
+      background:#f8fbff;
+      font-size:12px;
+      line-height:1.35;
+      display:grid;
+      grid-template-columns:1fr auto;
+      gap:8px;
+      align-items:start;
+      cursor:pointer;
+    }
+
+    .stop-card:hover { background:#f1f7ff; }
+
+    .stop-card strong {
+      display:block;
+      color:#0b2651;
+      margin-bottom:2px;
+    }
+
+    .stop-card small {
+      color:#6b7890;
+      word-break:break-word;
+    }
+
+    .stop-actions {
+      display:flex;
+      flex-direction:column;
+      gap:5px;
+    }
+
+    .mini {
+      width:30px;
+      height:26px;
+      border-radius:10px;
+      padding:0;
+      font-size:12px;
+      background:#fff;
+    }
+
+    .creator-card {
+      display:grid;
+      grid-template-columns:64px 1fr;
+      gap:12px;
+      align-items:center;
+      margin-top:14px;
+      padding:11px;
+      border-radius:22px;
+      background:#fff;
+      border:1px solid #e1ebf7;
+    }
+
+    .creator-card img {
+      max-width:64px;
+      max-height:56px;
+      object-fit:contain;
+      filter:drop-shadow(0 6px 10px rgba(4,23,51,.12));
+    }
+
+    .creator-card strong {
+      display:block;
+      color:#0b2651;
+      font-size:13px;
+      line-height:1.2;
+    }
+
+    .creator-card span {
+      display:block;
+      color:#65758f;
+      font-size:11px;
+      margin-top:2px;
+      line-height:1.25;
+    }
+
+    .search-results {
+      position:absolute;
+      z-index:980;
+      left:50%;
+      top:86px;
+      transform:translateX(-50%);
+      width:min(820px, calc(100vw - 40px));
+      display:none;
+      border-radius:22px;
+      background:rgba(255,255,255,.98);
+      border:1px solid #dbe7f5;
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+
+    .result {
+      padding:13px 16px;
+      cursor:pointer;
+      border-bottom:1px solid #edf2f8;
+      font-size:13px;
+      line-height:1.35;
+    }
+
+    .result:hover { background:#f1f7ff; }
+    .result:last-child { border-bottom:0; }
+    .result strong { display:block; color:#0b2651; margin-bottom:3px; }
+    .result span { color:#65738a; }
+
+    .map-badge {
+      position:absolute;
+      z-index:720;
+      left:18px;
+      bottom:18px;
+      padding:10px 14px;
+      border-radius:18px;
+      background:var(--panel);
+      border:1px solid var(--border);
+      box-shadow:var(--shadow2);
+      font-size:12px;
+      color:#44536b;
+      max-width:min(620px, calc(100vw - 36px));
+      backdrop-filter:blur(12px);
+    }
+
+
+    .record-hud {
+      display:none;
+      position:absolute;
+      z-index:1000;
+      left:18px;
+      bottom:18px;
+      padding:12px 16px;
+      border-radius:18px;
+      background:rgba(7,31,67,.88);
+      color:#fff;
+      border:1px solid rgba(255,255,255,.18);
+      box-shadow:0 14px 34px rgba(4,23,51,.24);
+      backdrop-filter:blur(12px);
+      min-width:220px;
+    }
+
+    .record-hud strong {
+      display:block;
+      font-size:11px;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      color:rgba(255,255,255,.72);
+      margin-bottom:4px;
+    }
+
+    .record-hud b {
+      display:block;
+      font-size:26px;
+      line-height:1;
+      letter-spacing:-.03em;
+      color:#fff;
+    }
+
+    .record-hud span {
+      display:block;
+      margin-top:4px;
+      font-size:12px;
+      color:rgba(255,255,255,.82);
+    }
+
+    .capture-overlay {
+      position:absolute;
+      z-index:760;
+      left:50%;
+      top:18px;
+      transform:translateX(-50%);
+      padding:10px 18px;
+      border-radius:999px;
+      background:rgba(7,31,67,.92);
+      color:#fff;
+      border:1px solid rgba(255,255,255,.20);
+      box-shadow:0 12px 34px rgba(4,23,51,.22);
+      font-size:13px;
+      font-weight:900;
+      display:none;
+      pointer-events:none;
+    }
+
+    .loading {
+      position:absolute;
+      z-index:1300;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      pointer-events:none;
+      background:linear-gradient(135deg,rgba(218,231,245,.97),rgba(246,249,253,.82));
+      transition:.35s ease;
+    }
+
+    .loading.hide { opacity:0; visibility:hidden; }
+
+    .loader-card {
+      width:min(470px, calc(100vw - 40px));
+      padding:24px;
+      border-radius:30px;
+      background:#fff;
+      border:1px solid #dce8f5;
+      box-shadow:var(--shadow);
+      text-align:center;
+    }
+
+    .loader-card img {
+      max-height:64px;
+      max-width:180px;
+      object-fit:contain;
+      margin-bottom:12px;
+    }
+
+    .loader-card h2 {
+      margin:0 0 8px;
+      color:var(--navy);
+      font-size:20px;
+    }
+
+    .loader-card p {
+      margin:0;
+      color:#62738f;
+      font-size:13px;
+      line-height:1.45;
+    }
+
+    .spinner {
+      width:48px;
+      height:48px;
+      margin:0 auto 14px;
+      border-radius:50%;
+      border:5px solid #e5eef8;
+      border-top-color:#fc4c02;
+      animation:spin 1s linear infinite;
+    }
+
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+
+    body.only-map-recording .leaflet-control-container,
+    body.only-map-recording .leaflet-control-attribution,
+    body.only-map-recording .leaflet-control-scale {
+      display:none !important;
+    }
+
+    body.only-map-recording .record-hud {
+      display:none !important;
+    }
+
+    body.only-map-recording #map {
+      inset:0 !important;
+      width:100vw !important;
+      height:100vh !important;
+    }
+
+    .toast {
+      display:none;
+      position:absolute;
+      z-index:1200;
+      left:50%;
+      bottom:24px;
+      transform:translateX(-50%);
+      width:min(820px, calc(100vw - 40px));
+      background:#fff7ed;
+      border:1px solid #fed7aa;
+      color:#7c2d12;
+      border-radius:20px;
+      padding:12px 14px;
+      box-shadow:var(--shadow2);
+      font-size:13px;
+      line-height:1.4;
+    }
+
+    .leaflet-control-layers {
+      border-radius:18px !important;
+      overflow:hidden;
+      border:1px solid #cddced !important;
+      box-shadow:0 10px 30px rgba(4,26,55,.15) !important;
+      font-family:"Century Gothic","Segoe UI",Arial,sans-serif !important;
+      max-height:260px;
+      overflow-y:auto;
+    }
+
+    .leaflet-bar {
+      border-radius:16px !important;
+      overflow:hidden;
+      border:1px solid #cddced !important;
+      box-shadow:0 10px 30px rgba(4,26,55,.15) !important;
+    }
+
+    .leaflet-popup-content-wrapper {
+      border-radius:20px;
+      box-shadow:0 12px 40px rgba(4,26,55,.25);
+    }
+
+    .leaflet-popup-content {
+      font-family:"Century Gothic","Segoe UI",Arial,sans-serif;
+      font-size:13px;
+      line-height:1.35;
+    }
+
+    .popup-actions {
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:6px;
+      margin-top:10px;
+    }
+
+    .popup-actions button {
+      height:34px;
+      border-radius:12px;
+      font-size:11px;
+      padding:0 8px;
+    }
+
+    .school-marker {
+      width:32px;
+      height:32px;
+      border-radius:50%;
+      background:var(--red);
+      border:5px solid rgba(255,255,255,.98);
+      box-shadow:0 8px 22px rgba(233,53,69,.38), 0 0 0 9px rgba(233,53,69,.18);
+    }
+
+    .stop-marker {
+      width:28px;
+      height:28px;
+      border-radius:50%;
+      background:linear-gradient(135deg,#0b6ff5,#27d7ff);
+      border:4px solid rgba(255,255,255,.96);
+      box-shadow:0 8px 20px rgba(11,111,245,.35), 0 0 0 5px rgba(11,111,245,.14);
+      display:grid;
+      place-items:center;
+      color:#fff;
+      font-size:11px;
+      font-weight:900;
+    }
+
+    .runner-marker {
+      width:44px;
+      height:44px;
+      border-radius:50%;
+      background:linear-gradient(135deg,#ff9d3b,#fc4c02);
+      border:4px solid rgba(255,255,255,.98);
+      box-shadow:0 12px 28px rgba(252,76,2,.42), 0 0 0 10px rgba(252,76,2,.17);
+      display:grid;
+      place-items:center;
+      color:#fff;
+      font-size:21px;
+      transform-origin:center;
+    }
+
+    @media (max-width: 1240px) {
+      .brand-shell {
+        max-width:350px;
+      }
+      .brand-logos img {
+        max-width:86px;
+        max-height:48px;
+      }
+      .brand-text strong { font-size:13px; }
+      .searchbar {
+        left:auto;
+        right:18px;
+        transform:none;
+        top:16px;
+        width:min(620px, calc(100vw - 400px));
+      }
+      .panel {
+        top:98px;
+      }
+    }
+
+    @media (max-width: 980px) {
+      .brand-shell {
+        left:10px;
+        top:10px;
+        right:10px;
+        max-width:none;
+      }
+      .brand-logos img {
+        max-width:74px;
+        max-height:42px;
+      }
+      .brand-text strong { font-size:12px; }
+      .brand-text span { font-size:10px; }
+      .searchbar {
+        left:10px;
+        right:10px;
+        top:82px;
+        transform:none;
+        width:auto;
+        min-width:0;
+        grid-template-columns:1fr;
+      }
+      .searchbar button { height:42px; }
+      .panel {
+        width:calc(100vw - 20px);
+        right:10px;
+        top:auto;
+        bottom:10px;
+        max-height:43vh;
+        border-radius:24px;
+      }
+      .search-results {
+        top:230px;
+        width:calc(100vw - 28px);
+      }
+      .map-badge { display:none; }
+      .grid3 { grid-template-columns:1fr 1fr; }
+    }
+
+    @media (max-width: 540px) {
+      .brand-text { display:none; }
+      .brand-shell { justify-content:center; }
+      .brand-logos img { max-width:92px; }
+      .stats { grid-template-columns:1fr 1fr 1fr; }
+      .stat b { font-size:15px; }
+    }
+
+
+
+    .record-permission {
+      display:none;
+      position:absolute;
+      z-index:1600;
+      inset:0;
+      align-items:center;
+      justify-content:center;
+      padding:22px;
+      background:rgba(7,31,67,.78);
+      backdrop-filter:blur(12px);
+    }
+
+    .record-permission-card {
+      width:min(520px, calc(100vw - 36px));
+      border-radius:28px;
+      background:#fff;
+      border:1px solid rgba(219,232,247,.96);
+      box-shadow:0 24px 70px rgba(4,23,51,.34);
+      padding:22px;
+      text-align:center;
+    }
+
+    .record-permission-card h2 {
+      margin:0 0 8px;
+      color:#071f43;
+      font-size:20px;
+      letter-spacing:-.03em;
+    }
+
+    .record-permission-card p {
+      margin:0;
+      color:#60718d;
+      font-size:13px;
+      line-height:1.45;
+    }
+
+    .record-permission-card b {
+      color:#fc4c02;
+    }
+
+    .record-permission-card .steps {
+      text-align:left;
+      margin:14px 0 0;
+      padding:12px;
+      border-radius:18px;
+      background:#f8fbff;
+      border:1px solid #dfe9f6;
+      color:#263a59;
+      font-size:13px;
+      line-height:1.45;
+    }
+
+    body.only-map-recording .record-permission {
+      display:none !important;
+    }
+
+    /* ===== UNIVERSAL RESPONSIVE PWA PATCH ===== */
+    :root {
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    #app, #map {
+      min-height: 100vh;
+      min-height: 100dvh;
+    }
+
+    .mobile-quickbar {
+      display:none;
+      position:absolute;
+      z-index:940;
+      left:10px;
+      right:10px;
+      bottom:calc(10px + var(--safe-bottom));
+      grid-template-columns:repeat(5, 1fr);
+      gap:7px;
+      padding:8px;
+      border-radius:22px;
+      background:rgba(255,255,255,.94);
+      border:1px solid rgba(219,232,247,.95);
+      box-shadow:0 16px 42px rgba(5,26,55,.25);
+      backdrop-filter:blur(14px);
+    }
+
+    .mobile-quickbar button {
+      height:42px;
+      min-width:0;
+      padding:0 6px;
+      border-radius:15px;
+      font-size:11px;
+      line-height:1.05;
+    }
+
+    .mobile-panel-btn {
+      display:none;
+      position:absolute;
+      z-index:945;
+      right:12px;
+      top:calc(82px + var(--safe-top));
+      width:46px;
+      height:46px;
+      padding:0;
+      border-radius:18px;
+      background:linear-gradient(135deg,#0d3978,#061a38);
+      color:#fff;
+      box-shadow:0 12px 30px rgba(4,23,51,.28);
+    }
+
+    .install-hint {
+      display:none;
+      position:absolute;
+      z-index:950;
+      left:10px;
+      right:10px;
+      bottom:calc(70px + var(--safe-bottom));
+      padding:10px 12px;
+      border-radius:18px;
+      background:rgba(7,31,67,.92);
+      color:#fff;
+      border:1px solid rgba(255,255,255,.18);
+      box-shadow:0 14px 34px rgba(4,23,51,.24);
+      font-size:12px;
+      line-height:1.35;
+    }
+
+    .install-hint button {
+      margin-top:8px;
+      height:34px;
+      border-radius:12px;
+      background:#fff;
+      color:#071f43;
+      border:0;
+    }
+
+    @media (max-width: 980px) {
+      html, body {
+        overscroll-behavior:none;
+        touch-action:manipulation;
+      }
+
+      .brand-shell {
+        left:10px !important;
+        right:64px !important;
+        top:calc(8px + var(--safe-top)) !important;
+        max-width:none !important;
+        height:62px;
+        padding:8px 10px !important;
+        border-radius:22px !important;
+      }
+
+      .brand-logos img {
+        max-height:40px !important;
+        max-width:72px !important;
+      }
+
+      .brand-text strong {
+        font-size:12px !important;
+      }
+
+      .brand-text span {
+        font-size:10px !important;
+      }
+
+      .searchbar {
+        left:10px !important;
+        right:10px !important;
+        top:calc(78px + var(--safe-top)) !important;
+        transform:none !important;
+        width:auto !important;
+        min-width:0 !important;
+        grid-template-columns:1fr auto !important;
+        gap:7px !important;
+        padding:8px !important;
+        border-radius:20px !important;
+      }
+
+      .searchbar input {
+        height:42px !important;
+        font-size:13px !important;
+        border-radius:15px !important;
+        padding:0 12px !important;
+      }
+
+      .searchbar button {
+        height:42px !important;
+        border-radius:15px !important;
+        font-size:11px !important;
+        padding:0 9px !important;
+      }
+
+      .searchbar button:nth-child(3) {
+        display:none;
+      }
+
+      .mobile-panel-btn {
+        display:block;
+      }
+
+      .panel {
+        left:10px !important;
+        right:10px !important;
+        top:auto !important;
+        bottom:calc(68px + var(--safe-bottom)) !important;
+        width:auto !important;
+        max-height:48dvh !important;
+        border-radius:25px !important;
+        padding:13px !important;
+        transform:translateY(calc(100% - 92px));
+        transition:transform .24s ease, opacity .24s ease;
+      }
+
+      .panel.open {
+        transform:translateY(0);
+      }
+
+      .panel h1 {
+        font-size:17px !important;
+      }
+
+      .panel p {
+        font-size:11px !important;
+      }
+
+      .activity-card {
+        margin:8px 0 !important;
+        border-radius:21px !important;
+      }
+
+      .activity-header {
+        padding:12px 12px 2px !important;
+      }
+
+      .stats {
+        margin:10px 12px 12px !important;
+      }
+
+      .stat {
+        padding:9px 6px !important;
+      }
+
+      .stat b {
+        font-size:15px !important;
+      }
+
+      .section-title {
+        margin:12px 0 7px !important;
+      }
+
+      .grid2,
+      .grid3 {
+        grid-template-columns:1fr 1fr !important;
+        gap:7px !important;
+      }
+
+      .grid2 button,
+      .grid3 button,
+      .video-box button {
+        height:39px !important;
+        border-radius:14px !important;
+        font-size:11px !important;
+        padding:0 7px !important;
+      }
+
+      .video-box {
+        border-radius:19px !important;
+        padding:9px !important;
+      }
+
+      .slider-box {
+        grid-template-columns:68px 1fr 38px !important;
+        font-size:11px !important;
+      }
+
+      .stop-card {
+        border-radius:16px !important;
+        padding:9px 9px 9px 10px !important;
+      }
+
+      .creator-card {
+        grid-template-columns:54px 1fr !important;
+        border-radius:19px !important;
+        padding:9px !important;
+      }
+
+      .creator-card img {
+        max-width:54px !important;
+        max-height:48px !important;
+      }
+
+      .search-results {
+        left:10px !important;
+        right:10px !important;
+        top:calc(136px + var(--safe-top)) !important;
+        width:auto !important;
+        transform:none !important;
+        max-height:38dvh;
+        overflow:auto;
+      }
+
+      .map-badge {
+        display:none !important;
+      }
+
+      .mobile-quickbar {
+        display:grid;
+      }
+
+      .leaflet-control-layers {
+        display:none !important;
+      }
+
+      .leaflet-control-zoom {
+        margin-top:150px !important;
+      }
+
+      .leaflet-control-attribution {
+        font-size:9px !important;
+      }
+
+      .record-hud {
+        left:10px !important;
+        right:10px !important;
+        bottom:calc(10px + var(--safe-bottom)) !important;
+        min-width:0 !important;
+      }
+
+      body.only-map-recording .brand-shell,
+      body.only-map-recording .searchbar,
+      body.only-map-recording .mobile-quickbar,
+      body.only-map-recording .mobile-panel-btn,
+      body.only-map-recording .panel {
+        display:none !important;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .brand-text {
+        border-left:0 !important;
+        padding-left:4px !important;
+      }
+
+      .brand-logos {
+        gap:5px !important;
+      }
+
+      .brand-logos img {
+        max-width:55px !important;
+      }
+
+      .searchbar button.primary {
+        width:76px;
+      }
+
+      .mobile-quickbar button {
+        font-size:10px;
+        padding:0 4px;
+      }
+    }
+
+    @media (orientation: landscape) and (max-height: 560px) {
+      .brand-shell {
+        width:350px !important;
+        right:auto !important;
+      }
+
+      .searchbar {
+        left:370px !important;
+        right:64px !important;
+        top:calc(8px + var(--safe-top)) !important;
+      }
+
+      .panel {
+        left:auto !important;
+        right:10px !important;
+        bottom:calc(62px + var(--safe-bottom)) !important;
+        width:360px !important;
+        max-height:calc(100dvh - 80px) !important;
+      }
+
+      .leaflet-control-zoom {
+        margin-top:76px !important;
+      }
+    }
+
+    @media print {
+      .brand-shell,.searchbar,.panel,.map-badge,.search-results,.toast,.loading,.capture-overlay { display:none !important; }
+      #map { inset:0 !important; }
+    }
+  </style>
+
+<style>
+  .dual-switch-btn{
+    position:fixed;
+    z-index:5000;
+    right:18px;
+    bottom:18px;
+    height:42px;
+    padding:0 14px;
+    border-radius:999px;
+    background:rgba(7,31,67,.94);
+    color:#fff !important;
+    text-decoration:none;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-family:"Segoe UI",Arial,sans-serif;
+    font-size:12px;
+    font-weight:900;
+    box-shadow:0 12px 30px rgba(4,23,51,.28);
+    border:1px solid rgba(255,255,255,.18);
+    backdrop-filter:blur(10px);
+  }
+  .dual-switch-btn:hover{filter:brightness(1.05)}
+  @media(max-width:980px){
+    .dual-switch-btn{
+      right:10px;
+      bottom:calc(10px + env(safe-area-inset-bottom,0px));
+      height:38px;
+      font-size:11px;
+    }
+  }
+</style>
+
+</head>
+
+<body>
+<div id="app">
+  <div id="map"></div>
+
+  <div class="loading" id="loading">
+    <div class="loader-card">
+      <div class="spinner"></div>
+      <img src="assets/logo-san-pedro.png" alt="San Pedro">
+      <h2>San Pedro Route Studio</h2>
+      <p>Cargando vista satelital realista, rutas, búsqueda de direcciones y modo recorrido estilo Strava.</p>
+    </div>
+  </div>
+
+  <div class="brand-shell" id="brandShell">
+    <div class="brand-logos">
+      <img src="assets/logo-alcaldia.png" alt="Alcaldía de San Pedro">
+      <img src="assets/logo-san-pedro.png" alt="Marca San Pedro">
+    </div>
+    <div class="brand-text">
+      <strong>San Pedro Route Studio</strong>
+      <span>Recorridos, rutas y visualización territorial</span>
+    </div>
+  </div>
+
+  <div class="searchbar" id="searchbar">
+    <input id="searchInput" placeholder="Buscar destino, calle, carrera, lugar o coordenadas..." autocomplete="off">
+    <button class="primary" id="searchBtn">Buscar y agregar</button>
+    <button id="clickModeBtn">Clic: OFF</button>
+  </div>
+
+  <div class="search-results" id="resultsBox"></div>
+  <div class="capture-overlay" id="captureOverlay">RECORRIDO · SAN PEDRO ROUTE STUDIO</div>
+  <div class="record-hud" id="recordHud"><strong>Kilómetros recorridos</strong><b id="recordKm">0.00 km</b><span id="recordKmSub">de 0.00 km</span></div>
+
+  <aside class="panel" id="panel">
+    <span class="pill">● Modo operativo turístico / institucional</span>
+    <h1>Recorrido estilo Strava</h1>
+    <p>Traza una ruta desde el Colegio José Antonio Aguilera, visualízala con satélite realista, navega el recorrido y genera video WebM.</p>
+
+    <div class="activity-card">
+      <div class="activity-header">
+        <div>
+          <strong id="activityTitle">Recorrido San Pedro</strong>
+          <span id="activitySub">Inicio: Colegio José Antonio Aguilera</span>
+        </div>
+        <span id="zoomLockLabel">Zoom bloqueado: 18</span>
+      </div>
+      <div class="stats">
+        <div class="stat"><b id="statKm">0.00</b><small>km</small></div>
+        <div class="stat"><b id="statMin">0</b><small>min</small></div>
+        <div class="stat"><b id="statStops">0</b><small>paradas</small></div>
+      </div>
+      <div class="progress-wrap">
+        <div class="progress-label">
+          <span>Progreso del recorrido</span>
+          <span id="progressText">0%</span>
+        </div>
+        <div class="progress"><span id="progressBar"></span></div>
+      </div>
+    </div>
+
+    <div class="status" id="statusBox">
+      Vista activa: <b>Satélite realista + etiquetas</b>. El zoom máximo está bloqueado para evitar que desaparezcan mosaicos o imágenes.
+    </div>
+
+    <div class="section-title">Mapa</div>
+    <div class="grid2">
+      <button class="success" id="realisticBtn">Realista</button>
+      <button id="streetsBtn">Calles</button>
+      <button id="repairBtn">Reparar mapa</button>
+      <button class="dark" id="fullscreenBtn">Pantalla completa</button>
+    </div>
+
+    <div class="section-title">Ruta</div>
+    <div class="grid2">
+      <button id="locateBtn">Mi ubicación</button>
+      <button class="primary" id="routeBtn">Calcular ruta</button>
+      <button id="saveBtn">Guardar local</button>
+      <button id="loadBtn">Cargar guardada</button>
+      <button id="googleBtn">Abrir Google</button>
+      <button id="wazeBtn">Abrir Waze</button>
+      <button id="shareBtn">Copiar enlace</button>
+      <button class="danger" id="clearBtn">Limpiar</button>
+    </div>
+
+    <div class="section-title">Modo video / navegación</div>
+    <div class="video-box">
+      <div class="grid2" style="margin:0;">
+        <button class="strava" id="playBtn">▶ Navegar ruta</button>
+        <button id="pauseBtn">Pausar</button>
+        <button id="resetVideoBtn">Reiniciar cámara</button>
+        <button class="primary" id="recordBtn">Grabar WebM</button>
+        <button class="dark" id="recordMapOnlyBtn">Grabar solo mapa</button>
+        <button id="fullscreenCleanBtn">Pantalla limpia + grabar</button>
+      </div>
+      <div class="slider-box">
+        <span>Velocidad</span>
+        <input type="range" id="speedRange" min="1" max="10" value="4">
+        <b id="speedLabel">4x</b>
+      </div>
+      <div class="slider-box">
+        <span>Zoom</span>
+        <input type="range" id="zoomRange" min="15" max="18" value="16">
+        <b id="zoomLabel">16</b>
+      </div>
+      <div class="toggle-row">
+        <span>Modo estudio: ocultar panel al navegar</span>
+        <div class="toggle on" id="studioToggle"><span></span></div>
+      </div>
+      <div class="toggle-row">
+        <span>Modo rendimiento: cámara fluida</span>
+        <div class="toggle on" id="smoothToggle"><span></span></div>
+      </div>
+    </div>
+
+    <div class="section-title">Exportar</div>
+    <div class="grid3">
+      <button id="geojsonBtn">GeoJSON</button>
+      <button id="gpxBtn">GPX</button>
+      <button id="kmlBtn">KML</button>
+    </div>
+
+    <div class="section-title">Paradas</div>
+    <div class="stops" id="stopsList"></div>
+
+    <div class="creator-card">
+      <img src="assets/logo-jept.png" alt="JEPT">
+      <div>
+        <strong>Creador y desarrollador</strong>
+        <span>Juan E. Pérez · San Pedro Route Studio</span>
+      </div>
+    </div>
+  </aside>
+
+  <div class="map-badge">
+    <b>San Pedro, Valle del Cauca.</b> Satélite realista, rutas navegables, video de recorrido y exportación de trazados. Punto inicial: Colegio José Antonio Aguilera.
+  </div>
+
+
+  <button class="mobile-panel-btn" id="mobilePanelBtn">☰</button>
+
+  <div class="mobile-quickbar" id="mobileQuickbar">
+    <button class="success" id="mRouteBtn">Ruta</button>
+    <button class="strava" id="mPlayBtn">▶</button>
+    <button id="mRealBtn">Real</button>
+    <button id="mStreetBtn">Calles</button>
+    <button id="mGoogleBtn">Google</button>
+  </div>
+
+  <div class="install-hint" id="installHint">
+    <b>Instalar como app</b><br>
+    En Android usa “Instalar app”. En iPhone abre Safari, toca Compartir y luego “Agregar a pantalla de inicio”.
+    <br><button id="installCloseBtn">Entendido</button>
+  </div>
+
+
+  <div class="record-permission" id="recordPermission">
+    <div class="record-permission-card">
+      <h2>Preparando grabación limpia</h2>
+      <p>Cuando el navegador pregunte qué deseas compartir, selecciona <b>Esta pestaña</b> o <b>Chrome Tab</b>. No elijas pantalla completa ni ventana.</p>
+      <div class="steps">
+        1. Selecciona <b>Esta pestaña</b>.<br>
+        2. Pulsa <b>Compartir</b>.<br>
+        3. La app ya está configurada para pedir preferencia por la pestaña actual; si no aparece, abre la app como página normal en Chrome/Edge, no como PWA instalada.
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+  "use strict";
+
+  const SCHOOL = {
+    name: "Colegio José Antonio Aguilera",
+    lat: 3.99712,
+    lng: -76.22930,
+    label: "Punto de inicio"
+  };
+
+  const CONFIG = {
+    maxSafeZoom: window.matchMedia("(max-width: 980px)").matches ? 17 : 18,
+    initialZoom: window.matchMedia("(max-width: 980px)").matches ? 16 : 17,
+    sanPedroBounds: [[3.9820, -76.2470], [4.0115, -76.2070]],
+    widerBounds: [[3.94, -76.31], [4.06, -76.14]]
+  };
+
+  const state = {
+    stops: [],
+    routeLayer: null,
+    routeDoneLayer: null,
+    routeLatLngs: [],
+    routeDistance: 0,
+    routeDuration: 0,
+    clickMode: false,
+    tileErrors: 0,
+    runnerMarker: null,
+    animFrame: null,
+    isPlaying: false,
+    progress: 0,
+    lastFrameTime: 0,
+    mediaRecorder: null,
+    recordedChunks: [],
+    captureStream: null,
+    lastCameraMove: 0,
+    routeMetrics: [],
+    routeTotalMeters: 0,
+    smoothMode: true,
+    studioMode: true,
+    uiHidden: false,
+    activeBaseName: "Satélite realista + etiquetas"
+  };
+
+  const el = {
+    map: document.getElementById("map"),
+    loading: document.getElementById("loading"),
+    brandShell: document.getElementById("brandShell"),
+    searchbar: document.getElementById("searchbar"),
+    captureOverlay: document.getElementById("captureOverlay"),
+    recordHud: document.getElementById("recordHud"),
+    recordKm: document.getElementById("recordKm"),
+    recordKmSub: document.getElementById("recordKmSub"),
+    panel: document.getElementById("panel"),
+    searchInput: document.getElementById("searchInput"),
+    searchBtn: document.getElementById("searchBtn"),
+    clickModeBtn: document.getElementById("clickModeBtn"),
+    fullscreenBtn: document.getElementById("fullscreenBtn"),
+    resultsBox: document.getElementById("resultsBox"),
+    statusBox: document.getElementById("statusBox"),
+    realisticBtn: document.getElementById("realisticBtn"),
+    streetsBtn: document.getElementById("streetsBtn"),
+    repairBtn: document.getElementById("repairBtn"),
+    locateBtn: document.getElementById("locateBtn"),
+    routeBtn: document.getElementById("routeBtn"),
+    clearBtn: document.getElementById("clearBtn"),
+    saveBtn: document.getElementById("saveBtn"),
+    loadBtn: document.getElementById("loadBtn"),
+    googleBtn: document.getElementById("googleBtn"),
+    wazeBtn: document.getElementById("wazeBtn"),
+    shareBtn: document.getElementById("shareBtn"),
+    playBtn: document.getElementById("playBtn"),
+    pauseBtn: document.getElementById("pauseBtn"),
+    resetVideoBtn: document.getElementById("resetVideoBtn"),
+    recordBtn: document.getElementById("recordBtn"),
+    recordMapOnlyBtn: document.getElementById("recordMapOnlyBtn"),
+    fullscreenCleanBtn: document.getElementById("fullscreenCleanBtn"),
+    speedRange: document.getElementById("speedRange"),
+    speedLabel: document.getElementById("speedLabel"),
+    zoomRange: document.getElementById("zoomRange"),
+    zoomLabel: document.getElementById("zoomLabel"),
+    studioToggle: document.getElementById("studioToggle"),
+    smoothToggle: document.getElementById("smoothToggle"),
+    geojsonBtn: document.getElementById("geojsonBtn"),
+    gpxBtn: document.getElementById("gpxBtn"),
+    kmlBtn: document.getElementById("kmlBtn"),
+    stopsList: document.getElementById("stopsList"),
+    toast: document.getElementById("toast"),
+    mobilePanelBtn: document.getElementById("mobilePanelBtn"),
+    mobileQuickbar: document.getElementById("mobileQuickbar"),
+    mRouteBtn: document.getElementById("mRouteBtn"),
+    mPlayBtn: document.getElementById("mPlayBtn"),
+    mRealBtn: document.getElementById("mRealBtn"),
+    mStreetBtn: document.getElementById("mStreetBtn"),
+    mGoogleBtn: document.getElementById("mGoogleBtn"),
+    installHint: document.getElementById("installHint"),
+    installCloseBtn: document.getElementById("installCloseBtn"),
+    recordPermission: document.getElementById("recordPermission"),
+    statKm: document.getElementById("statKm"),
+    statMin: document.getElementById("statMin"),
+    statStops: document.getElementById("statStops"),
+    progressBar: document.getElementById("progressBar"),
+    progressText: document.getElementById("progressText"),
+    zoomLockLabel: document.getElementById("zoomLockLabel")
+  };
+
+  function toast(message, persistent=false) {
+    el.toast.textContent = message;
+    el.toast.style.display = "block";
+    if(!persistent) setTimeout(() => el.toast.style.display = "none", 5600);
+  }
+
+  function status(html) {
+    el.statusBox.innerHTML = html;
+  }
+
+  function hideLoader() {
+    setTimeout(() => el.loading.classList.add("hide"), 750);
+  }
+
+  if(!window.L) {
+    toast("No se pudo cargar Leaflet. Revisa conexión a internet y vuelve a abrir el archivo.", true);
+    return;
+  }
+
+  const map = L.map("map", {
+    zoomControl: true,
+    preferCanvas: true,
+    center: [SCHOOL.lat, SCHOOL.lng],
+    zoom: CONFIG.initialZoom,
+    minZoom: 12,
+    maxZoom: CONFIG.maxSafeZoom,
+    maxBounds: CONFIG.widerBounds,
+    maxBoundsViscosity: .38,
+    inertia: true,
+    zoomSnap: .25,
+    wheelDebounceTime: 40,
+    attributionControl: true
+  });
+
+  map.createPane("routePane");
+  map.getPane("routePane").style.zIndex = 640;
+  map.createPane("routeDonePane");
+  map.getPane("routeDonePane").style.zIndex = 650;
+  map.createPane("markerTopPane");
+  map.getPane("markerTopPane").style.zIndex = 700;
+
+  const tileCommon = {
+    maxZoom: CONFIG.maxSafeZoom,
+    maxNativeZoom: CONFIG.maxSafeZoom,
+    keepBuffer: 8,
+    updateWhenIdle: false,
+    updateWhenZooming: false,
+    crossOrigin: true,
+    detectRetina: false,
+    errorTileUrl: "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="
+  };
+
+  const esriImagery = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+    ...tileCommon,
+    attribution: "Imagery &copy; Esri"
+  });
+
+  const esriTransport = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}", {
+    ...tileCommon,
+    opacity: .90,
+    attribution: "Transportation &copy; Esri"
+  });
+
+  const esriLabels = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", {
+    ...tileCommon,
+    opacity: .97,
+    attribution: "Labels &copy; Esri"
+  });
+
+  const realisticGroup = L.layerGroup([esriImagery, esriTransport, esriLabels]);
+
+  const baseLayers = {
+    "Satélite realista + etiquetas": realisticGroup,
+    "Satélite limpio": L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+      ...tileCommon,
+      attribution: "Tiles &copy; Esri"
+    }),
+    "Calles claras": L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      ...tileCommon,
+      subdomains: "abc",
+      attribution: "&copy; OpenStreetMap"
+    }),
+    "Mapa profesional claro": L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+      ...tileCommon,
+      subdomains: "abcd",
+      attribution: "&copy; OpenStreetMap &copy; CARTO"
+    }),
+    "Calles Esri": L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}", {
+      ...tileCommon,
+      attribution: "Tiles &copy; Esri"
+    })
+  };
+
+  realisticGroup.addTo(map);
+  L.control.layers(baseLayers, null, {position:"bottomright", collapsed:false}).addTo(map);
+  L.control.scale({metric:true, imperial:false, position:"bottomleft"}).addTo(map);
+
+  function bindTileEvents(layer) {
+    if(layer.eachLayer) {
+      layer.eachLayer(bindTileEvents);
+      return;
+    }
+    layer.on("tileerror", () => {
+      state.tileErrors += 1;
+      if(map.getZoom() >= CONFIG.maxSafeZoom - .05) {
+        map.setZoom(CONFIG.maxSafeZoom - .75);
+      }
+      if(state.tileErrors === 7) {
+        toast("Se detectaron mosaicos incompletos. Bloqueé el zoom y reduje la escala para evitar que desaparezca la imagen.");
+        repairMap();
+      }
+      if(state.tileErrors === 13) {
+        useStreets(false);
+        toast("La capa satelital tuvo fallas de carga. Cambié temporalmente a Calles claras.", false);
+      }
+    });
+    layer.on("load", () => {
+      state.tileErrors = 0;
+      hideLoader();
+    });
+  }
+
+  Object.values(baseLayers).forEach(bindTileEvents);
+
+  map.on("baselayerchange", e => {
+    state.activeBaseName = e.name;
+    state.tileErrors = 0;
+    repairMap();
+    status(`Vista activa: <b>${e.name}</b>. Zoom máximo seguro: <b>${CONFIG.maxSafeZoom}</b>.`);
+  });
+
+  map.on("zoomend", () => {
+    if(map.getZoom() > CONFIG.maxSafeZoom) {
+      map.setZoom(CONFIG.maxSafeZoom);
+      toast("Zoom máximo bloqueado para evitar que desaparezcan imágenes o mosaicos.");
+    }
+    el.zoomLockLabel.textContent = `Zoom bloqueado: ${CONFIG.maxSafeZoom}`;
+  });
+
+  const schoolIcon = L.divIcon({
+    className: "",
+    html: '<div class="school-marker"></div>',
+    iconSize: [32,32],
+    iconAnchor: [16,16],
+    popupAnchor: [0,-14]
+  });
+
+  const schoolMarker = L.marker([SCHOOL.lat, SCHOOL.lng], {icon:schoolIcon, zIndexOffset:1000, pane:"markerTopPane"})
+    .addTo(map)
+    .bindPopup(`<b>${SCHOOL.name}</b><br>${SCHOOL.label}<br><small>${SCHOOL.lat.toFixed(5)}, ${SCHOOL.lng.toFixed(5)}</small>`);
+
+  L.circle([SCHOOL.lat, SCHOOL.lng], {
+    radius:95,
+    color:"#e93545",
+    weight:2,
+    opacity:.84,
+    fillColor:"#e93545",
+    fillOpacity:.12
+  }).addTo(map);
+
+  const landmarks = [
+    ["Parque Leonardo Tascón", 3.99655, -76.22735, "#1f7a3b"],
+    ["Alcaldía Municipal de San Pedro", 3.99555, -76.22710, "#0b6ff5"],
+    ["Parroquia San Pedro Apóstol", 3.99525, -76.22735, "#7c3aed"],
+    ["Cuerpo de Bomberos Voluntarios de San Pedro", 3.99840, -76.22830, "#dc2626"],
+    ["Estación de Bomberos San Pedro", 3.99810, -76.22810, "#dc2626"]
+  ];
+
+  landmarks.forEach(([name, lat, lng, color]) => {
+    L.circleMarker([lat,lng], {
+      radius:7,
+      color:"#fff",
+      weight:3,
+      fillColor:color,
+      fillOpacity:.96,
+      pane:"markerTopPane"
+    }).addTo(map).bindPopup(`<b>${name}</b><br><small>Referencia aproximada del casco urbano</small>`);
+  });
+
+  function stopIcon(number) {
+    return L.divIcon({
+      className:"",
+      html:`<div class="stop-marker">${number}</div>`,
+      iconSize:[28,28],
+      iconAnchor:[14,14],
+      popupAnchor:[0,-11]
+    });
+  }
+
+  const runnerIcon = L.divIcon({
+    className:"",
+    html:'<div class="runner-marker">➤</div>',
+    iconSize:[44,44],
+    iconAnchor:[22,22],
+    popupAnchor:[0,-18]
+  });
+
+  function parseCoordinates(text) {
+    const cleaned = text.trim().replace(/[;]/g,",").replace(/\s+/g," ");
+    const match = cleaned.match(/(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/);
+    if(!match) return null;
+    const lat = Number(match[1]);
+    const lng = Number(match[2]);
+    if(!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+    if(lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+    return {lat,lng,label:`Coordenadas ${lat.toFixed(6)}, ${lng.toFixed(6)}`};
+  }
+
+  function normalizeQuery(q) {
+    const t = q.trim();
+    if(!t) return "";
+    const lower = t.toLowerCase();
+    if(lower.includes("san pedro") || lower.includes("valle")) return t;
+    return `${t}, San Pedro, Valle del Cauca, Colombia`;
+  }
+
+  async function geocode(query) {
+    const coords = parseCoordinates(query);
+    if(coords) return [coords];
+
+    const q = normalizeQuery(query);
+    const url = new URL("https://nominatim.openstreetmap.org/search");
+    url.searchParams.set("format","jsonv2");
+    url.searchParams.set("q", q);
+    url.searchParams.set("limit","8");
+    url.searchParams.set("addressdetails","1");
+    url.searchParams.set("countrycodes","co");
+    url.searchParams.set("viewbox","-76.2470,4.0115,-76.2070,3.9820");
+    url.searchParams.set("bounded","0");
+
+    const res = await fetch(url.toString(), {headers: {"Accept":"application/json"}});
+    if(!res.ok) throw new Error("No se pudo buscar la dirección.");
+    const data = await res.json();
+
+    return data.map(item => ({
+      lat:Number(item.lat),
+      lng:Number(item.lon),
+      label:item.display_name || q,
+      type:item.type || "resultado"
+    })).filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lng));
+  }
+
+  async function reverseGeocode(lat,lng) {
+    const url = new URL("https://nominatim.openstreetmap.org/reverse");
+    url.searchParams.set("format","jsonv2");
+    url.searchParams.set("lat", String(lat));
+    url.searchParams.set("lon", String(lng));
+    url.searchParams.set("zoom","18");
+    url.searchParams.set("addressdetails","1");
+
+    try {
+      const res = await fetch(url.toString(), {headers: {"Accept":"application/json"}});
+      if(!res.ok) throw new Error("reverse failed");
+      const data = await res.json();
+      return data.display_name || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+    } catch(e) {
+      return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+    }
+  }
+
+  function clearResults() {
+    el.resultsBox.style.display = "none";
+    el.resultsBox.innerHTML = "";
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, m => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+    }[m]));
+  }
+
+  function shortLabel(label) {
+    if(!label) return "Destino";
+    const parts = label.split(",").map(x => x.trim()).filter(Boolean);
+    return parts.slice(0,3).join(", ");
+  }
+
+  function showResults(results) {
+    el.resultsBox.innerHTML = "";
+    if(!results.length) {
+      el.resultsBox.innerHTML = `<div class="result"><strong>Sin resultados</strong><span>Prueba con una dirección más general, punto cercano o coordenadas.</span></div>`;
+      el.resultsBox.style.display = "block";
+      return;
+    }
+
+    results.forEach((r, i) => {
+      const div = document.createElement("div");
+      div.className = "result";
+      div.innerHTML = `<strong>${i+1}. ${escapeHtml(shortLabel(r.label))}</strong><span>${escapeHtml(r.label)}</span>`;
+      div.addEventListener("click", () => {
+        clearResults();
+        addStop(r.lat, r.lng, shortLabel(r.label));
+      });
+      el.resultsBox.appendChild(div);
+    });
+
+    el.resultsBox.style.display = "block";
+  }
+
+  async function searchAndMaybeAdd() {
+    const query = el.searchInput.value.trim();
+    if(!query) {
+      toast("Escribe una dirección, punto de referencia o coordenadas.");
+      return;
+    }
+    status("Buscando dirección...");
+    clearResults();
+
+    try {
+      const results = await geocode(query);
+      if(results.length === 1) {
+        addStop(results[0].lat, results[0].lng, shortLabel(results[0].label));
+      } else {
+        showResults(results);
+        status(`Encontré <b>${results.length}</b> posibles resultados. Selecciona el correcto.`);
+      }
+    } catch(e) {
+      toast("No se pudo buscar la dirección. Revisa internet o prueba con una dirección más general.");
+      status("No se pudo completar la búsqueda.");
+    }
+  }
+
+  function addStop(lat,lng,label) {
+    stopPlayback(false);
+
+    const index = state.stops.length + 1;
+    const marker = L.marker([lat,lng], {
+      icon:stopIcon(index),
+      draggable:true,
+      pane:"markerTopPane"
+    }).addTo(map)
+      .bindPopup(`<b>Parada ${index}</b><br>${escapeHtml(label || "Destino")}<br><small>${lat.toFixed(6)}, ${lng.toFixed(6)}</small>`);
+
+    const stop = {lat,lng,label: label || `Parada ${index}`, marker};
+    state.stops.push(stop);
+
+    marker.on("dragend", async () => {
+      const p = marker.getLatLng();
+      stop.lat = p.lat;
+      stop.lng = p.lng;
+      stop.label = await reverseGeocode(p.lat, p.lng);
+      marker.setPopupContent(`<b>Parada ${state.stops.indexOf(stop)+1}</b><br>${escapeHtml(shortLabel(stop.label))}<br><small>${p.lat.toFixed(6)}, ${p.lng.toFixed(6)}</small>`);
+      renderStops();
+      calculateRoute(false);
+      updateHash();
+    });
+
+    map.flyTo([lat,lng], Math.min(CONFIG.maxSafeZoom, Math.max(map.getZoom(), 17.5)), {duration:.65});
+    renderStops();
+    updateStats();
+    updateHash();
+    calculateRoute(false);
+    status(`Parada agregada: <b>${escapeHtml(shortLabel(label))}</b>.`);
+  }
+
+  function removeStop(index) {
+    stopPlayback(false);
+    const [stop] = state.stops.splice(index,1);
+    if(stop && stop.marker) map.removeLayer(stop.marker);
+    renderStops();
+    updateStats();
+    updateHash();
+    calculateRoute(false);
+  }
+
+  function moveStop(index, delta) {
+    const newIndex = index + delta;
+    if(newIndex < 0 || newIndex >= state.stops.length) return;
+    stopPlayback(false);
+    const [item] = state.stops.splice(index,1);
+    state.stops.splice(newIndex,0,item);
+    renderStops();
+    updateHash();
+    calculateRoute(false);
+  }
+
+  function clearStops() {
+    stopPlayback(false);
+    state.stops.forEach(s => s.marker && map.removeLayer(s.marker));
+    state.stops = [];
+    clearRoute();
+    renderStops();
+    updateStats();
+    updateHash();
+    status("Paradas limpiadas. El punto de inicio se conserva.");
+  }
+
+  function clearRoute() {
+    if(state.routeLayer) map.removeLayer(state.routeLayer);
+    if(state.routeDoneLayer) map.removeLayer(state.routeDoneLayer);
+    if(state.runnerMarker) map.removeLayer(state.runnerMarker);
+    state.routeLayer = null;
+    state.routeDoneLayer = null;
+    state.runnerMarker = null;
+    state.routeLatLngs = [];
+    state.routeMetrics = [];
+    state.routeTotalMeters = 0;
+    state.routeDistance = 0;
+    state.routeDuration = 0;
+    state.lastCameraMove = 0;
+    state.progress = 0;
+    updateStats();
+  }
+
+  function renderStops() {
+    el.stopsList.innerHTML = "";
+    state.stops.forEach((stop, i) => {
+      if(stop.marker) {
+        stop.marker.setIcon(stopIcon(i+1));
+        stop.marker.setPopupContent(`<b>Parada ${i+1}</b><br>${escapeHtml(shortLabel(stop.label))}<br><small>${stop.lat.toFixed(6)}, ${stop.lng.toFixed(6)}</small>`);
+      }
+
+      const card = document.createElement("div");
+      card.className = "stop-card";
+      card.innerHTML = `
+        <div>
+          <strong>Parada ${i+1}: ${escapeHtml(shortLabel(stop.label))}</strong>
+          <small>${stop.lat.toFixed(6)}, ${stop.lng.toFixed(6)}</small>
+        </div>
+        <div class="stop-actions">
+          <button class="mini" title="Subir">↑</button>
+          <button class="mini" title="Bajar">↓</button>
+          <button class="mini danger" title="Eliminar">×</button>
+        </div>
+      `;
+      const buttons = card.querySelectorAll("button");
+      buttons[0].addEventListener("click", ev => { ev.stopPropagation(); moveStop(i,-1); });
+      buttons[1].addEventListener("click", ev => { ev.stopPropagation(); moveStop(i,1); });
+      buttons[2].addEventListener("click", ev => { ev.stopPropagation(); removeStop(i); });
+      card.addEventListener("click", () => {
+        map.flyTo([stop.lat, stop.lng], Math.min(CONFIG.maxSafeZoom, 17.8), {duration:.55});
+        stop.marker.openPopup();
+      });
+      el.stopsList.appendChild(card);
+    });
+
+    if(!state.stops.length) {
+      el.stopsList.innerHTML = `<div class="stop-card"><div><strong>Sin paradas agregadas</strong><small>Busca un destino o activa “Clic: ON”.</small></div></div>`;
+    }
+    updateStats();
+  }
+
+  async function calculateRoute(showWarnings=true) {
+    stopPlayback(false);
+
+    if(state.routeLayer) map.removeLayer(state.routeLayer);
+    if(state.routeDoneLayer) map.removeLayer(state.routeDoneLayer);
+    state.routeLayer = null;
+    state.routeDoneLayer = null;
+    state.routeLatLngs = [];
+    state.routeMetrics = [];
+    state.routeTotalMeters = 0;
+    state.routeDistance = 0;
+    state.routeDuration = 0;
+    state.lastCameraMove = 0;
+    state.progress = 0;
+    updateStats();
+
+    if(!state.stops.length) {
+      if(showWarnings) toast("Agrega al menos una parada para calcular la ruta.");
+      return;
+    }
+
+    const coords = [[SCHOOL.lng, SCHOOL.lat], ...state.stops.map(s => [s.lng, s.lat])];
+    const coordString = coords.map(c => `${c[0]},${c[1]}`).join(";");
+    const url = `https://router.project-osrm.org/route/v1/driving/${coordString}?overview=full&geometries=geojson&steps=true`;
+
+    status("Calculando ruta estilo recorrido...");
+    try {
+      const res = await fetch(url);
+      if(!res.ok) throw new Error("OSRM error");
+      const data = await res.json();
+      if(!data.routes || !data.routes[0]) throw new Error("Sin ruta");
+
+      const route = data.routes[0];
+      const latlngs = route.geometry.coordinates.map(([lng,lat]) => L.latLng(lat,lng));
+      state.routeLatLngs = latlngs;
+      state.routeDistance = route.distance;
+      state.routeDuration = route.duration;
+      buildRouteMetrics();
+
+      state.routeLayer = L.polyline(latlngs, {
+        pane:"routePane",
+        color:"#fc4c02",
+        weight:8,
+        opacity:.93,
+        lineJoin:"round",
+        lineCap:"round"
+      }).addTo(map);
+
+      L.polyline(latlngs, {
+        pane:"routePane",
+        color:"#ffffff",
+        weight:3,
+        opacity:.65,
+        lineJoin:"round",
+        lineCap:"round"
+      }).addTo(map);
+
+      state.routeDoneLayer = L.polyline([], {
+        pane:"routeDonePane",
+        color:"#ffd23c",
+        weight:7,
+        opacity:.96,
+        lineJoin:"round",
+        lineCap:"round"
+      }).addTo(map);
+
+      const bounds = L.latLngBounds([[SCHOOL.lat,SCHOOL.lng], ...state.stops.map(s => [s.lat,s.lng]), ...latlngs]);
+      map.fitBounds(bounds, {paddingTopLeft:[45,110], paddingBottomRight:[440,50], maxZoom:CONFIG.maxSafeZoom});
+
+      updateStats();
+      status(`Ruta lista: <b>${(route.distance/1000).toFixed(2)} km</b>, tiempo estimado <b>${Math.round(route.duration/60)} min</b>. Puedes navegarla o grabarla.`);
+    } catch(e) {
+      toast("No se pudo calcular la ruta con el servidor público. Puedes abrir la ruta en Google Maps o Waze.");
+      status("Ruta no calculada. Intenta de nuevo o abre en Google/Waze.");
+    }
+  }
+
+  function updateStats() {
+    const totalKm = state.routeDistance / 1000;
+    const currentKm = totalKm * state.progress;
+
+    el.statKm.textContent = totalKm.toFixed(2);
+    el.statMin.textContent = String(Math.round(state.routeDuration / 60));
+    el.statStops.textContent = String(state.stops.length);
+
+    const pct = Math.round(state.progress * 100);
+    el.progressText.textContent = `${pct}%`;
+    el.progressBar.style.width = `${pct}%`;
+
+    if(el.recordKm) {
+      el.recordKm.textContent = `${currentKm.toFixed(2)} km`;
+      el.recordKmSub.textContent = `de ${totalKm.toFixed(2)} km`;
+    }
+  }
+
+  async function handleMapClick(e) {
+    const {lat,lng} = e.latlng;
+    const address = await reverseGeocode(lat,lng);
+    const popupHtml = `
+      <b>Punto identificado</b><br>
+      ${escapeHtml(shortLabel(address))}<br>
+      <small>${lat.toFixed(6)}, ${lng.toFixed(6)}</small>
+      <div class="popup-actions">
+        <button onclick="window.__addStopFromPopup(${lat},${lng}, '${encodeURIComponent(shortLabel(address))}')">Agregar parada</button>
+        <button onclick="window.__copyCoords('${lat.toFixed(6)}, ${lng.toFixed(6)}')">Copiar</button>
+      </div>
+    `;
+    L.popup().setLatLng([lat,lng]).setContent(popupHtml).openOn(map);
+
+    if(state.clickMode) addStop(lat,lng,shortLabel(address));
+  }
+
+  window.__addStopFromPopup = function(lat,lng,encodedLabel) {
+    addStop(Number(lat), Number(lng), decodeURIComponent(encodedLabel));
+    map.closePopup();
+  };
+
+  window.__copyCoords = async function(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+      status(`Coordenadas copiadas: <b>${text}</b>`);
+    } catch(e) {
+      toast(`Coordenadas: ${text}`);
+    }
+  };
+
+  function routeUrl(provider) {
+    const origin = `${SCHOOL.lat},${SCHOOL.lng}`;
+    const destination = state.stops.length ? `${state.stops[state.stops.length-1].lat},${state.stops[state.stops.length-1].lng}` : origin;
+    const waypoints = state.stops.slice(0,-1).map(s => `${s.lat},${s.lng}`);
+
+    if(provider === "google") {
+      let url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&travelmode=driving`;
+      if(waypoints.length) url += `&waypoints=${encodeURIComponent(waypoints.join("|"))}`;
+      return url;
+    }
+
+    if(provider === "waze") {
+      const last = state.stops.length ? state.stops[state.stops.length-1] : SCHOOL;
+      return `https://waze.com/ul?ll=${last.lat},${last.lng}&navigate=yes&zoom=17`;
+    }
+  }
+
+  function openProvider(provider) {
+    if(!state.stops.length && provider !== "google") toast("Agrega una parada primero.");
+    window.open(routeUrl(provider), "_blank", "noopener,noreferrer");
+  }
+
+  function locateUser() {
+    if(!navigator.geolocation) {
+      toast("Tu navegador no permite geolocalización.");
+      return;
+    }
+
+    status("Buscando tu ubicación...");
+    navigator.geolocation.getCurrentPosition(pos => {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      L.circleMarker([lat,lng], {
+        radius:8,
+        color:"#fff",
+        weight:3,
+        fillColor:"#19a463",
+        fillOpacity:1,
+        pane:"markerTopPane"
+      }).addTo(map).bindPopup("<b>Mi ubicación</b>").openPopup();
+      map.flyTo([lat,lng], Math.min(CONFIG.maxSafeZoom,17.8), {duration:.7});
+      status("Ubicación encontrada.");
+    }, () => {
+      toast("No fue posible obtener tu ubicación. Revisa permisos del navegador.");
+      status("Ubicación no disponible.");
+    }, {enableHighAccuracy:true, timeout:9000, maximumAge:30000});
+  }
+
+  function repairMap() {
+    el.map.style.width = "100vw";
+    el.map.style.height = "100vh";
+    map.invalidateSize(true);
+    setTimeout(() => map.invalidateSize(true), 120);
+    setTimeout(() => map.invalidateSize(true), 520);
+    setTimeout(() => map.invalidateSize(true), 1150);
+  }
+
+  function switchBase(targetName) {
+    Object.values(baseLayers).forEach(layer => {
+      if(map.hasLayer(layer)) map.removeLayer(layer);
+    });
+    baseLayers[targetName].addTo(map);
+    state.activeBaseName = targetName;
+    state.tileErrors = 0;
+    repairMap();
+  }
+
+  function useRealistic(show=true) {
+    switchBase("Satélite realista + etiquetas");
+    if(show) status("Vista activa: <b>Satélite realista + etiquetas</b>. Ideal para ver pasto, vegetación, cubiertas y vías.");
+  }
+
+  function useStreets(show=true) {
+    switchBase("Calles claras");
+    if(show) status("Vista activa: <b>Calles claras</b>. Ideal para identificar carreras, calles y nombres.");
+  }
+
+  function toggleFullscreen() {
+    const root = document.documentElement;
+    if(!document.fullscreenElement) root.requestFullscreen?.();
+    else document.exitFullscreen?.();
+    setTimeout(repairMap, 280);
+  }
+
+  function buildRouteMetrics() {
+    state.routeMetrics = [];
+    state.routeTotalMeters = 0;
+
+    const pts = state.routeLatLngs;
+    if(!pts.length) return;
+
+    state.routeMetrics.push({accum:0, seg:0});
+    for(let i=1;i<pts.length;i++) {
+      const seg = map.distance(pts[i-1], pts[i]);
+      state.routeTotalMeters += seg;
+      state.routeMetrics.push({accum:state.routeTotalMeters, seg});
+    }
+  }
+
+  function bearing(a,b) {
+    const toRad = d => d * Math.PI / 180;
+    const toDeg = r => r * 180 / Math.PI;
+    const y = Math.sin(toRad(b.lng-a.lng)) * Math.cos(toRad(b.lat));
+    const x = Math.cos(toRad(a.lat))*Math.sin(toRad(b.lat)) -
+      Math.sin(toRad(a.lat))*Math.cos(toRad(b.lat))*Math.cos(toRad(b.lng-a.lng));
+    return (toDeg(Math.atan2(y,x)) + 360) % 360;
+  }
+
+  function pointAt(progress) {
+    const pts = state.routeLatLngs;
+    if(!pts.length) return null;
+
+    const total = state.routeTotalMeters || state.routeDistance || 1;
+    const target = total * Math.max(0, Math.min(1, progress));
+
+    let lo = 1;
+    let hi = state.routeMetrics.length - 1;
+    let index = hi;
+
+    while(lo <= hi) {
+      const mid = (lo + hi) >> 1;
+      if(state.routeMetrics[mid].accum >= target) {
+        index = mid;
+        hi = mid - 1;
+      } else {
+        lo = mid + 1;
+      }
+    }
+
+    const a = pts[index - 1] || pts[0];
+    const b = pts[index] || pts[pts.length - 1];
+    const current = state.routeMetrics[index] || {accum:total, seg:0};
+    const prevAccum = (state.routeMetrics[index - 1] || {accum:0}).accum;
+    const seg = current.seg || 1;
+    const t = Math.max(0, Math.min(1, (target - prevAccum) / seg));
+
+    const lat = a.lat + (b.lat - a.lat) * t;
+    const lng = a.lng + (b.lng - a.lng) * t;
+    return {lat,lng,angle:bearing(a,b), index};
+  }
+
+  async function ensureRoute() {
+    if(!state.stops.length) {
+      toast("Agrega al menos una parada para navegar el recorrido.");
+      return false;
+    }
+    if(!state.routeLatLngs.length) await calculateRoute(true);
+    return state.routeLatLngs.length > 0;
+  }
+
+  async function playRoute(reset=true) {
+    const ok = await ensureRoute();
+    if(!ok) return;
+
+    if(reset) state.progress = 0;
+    state.isPlaying = true;
+    state.lastFrameTime = performance.now();
+
+    if(state.studioMode && !document.body.classList.contains("only-map-recording")) setStudioUI(true, false, false);
+
+    if(!state.runnerMarker) {
+      const first = pointAt(state.progress) || {lat:SCHOOL.lat,lng:SCHOOL.lng,angle:0};
+      state.runnerMarker = L.marker([first.lat, first.lng], {icon:runnerIcon, zIndexOffset:3000, pane:"markerTopPane"}).addTo(map);
+    }
+
+    map.setZoom(Number(el.zoomRange.value), {animate:true});
+    animate();
+  }
+
+  function animate() {
+    if(!state.isPlaying) return;
+
+    const now = performance.now();
+    const dt = Math.min(90, now - state.lastFrameTime);
+    state.lastFrameTime = now;
+
+    const speed = Number(el.speedRange.value);
+    const baseDuration = 36000;
+    state.progress += (dt / baseDuration) * speed;
+
+    if(state.progress >= 1) {
+      state.progress = 1;
+      updateRunner();
+      state.isPlaying = false;
+      if(state.studioMode) setTimeout(() => setStudioUI(false, false), 900);
+      status("Recorrido finalizado.");
+      if(state.mediaRecorder && state.mediaRecorder.state === "recording") {
+        setTimeout(stopRecording, 1000);
+      }
+      return;
+    }
+
+    updateRunner();
+    state.animFrame = requestAnimationFrame(animate);
+  }
+
+  function updateRunner() {
+    const p = pointAt(state.progress);
+    if(!p) return;
+
+    if(!state.runnerMarker) {
+      state.runnerMarker = L.marker([p.lat,p.lng], {icon:runnerIcon, zIndexOffset:3000, pane:"markerTopPane"}).addTo(map);
+    } else {
+      state.runnerMarker.setLatLng([p.lat,p.lng]);
+    }
+
+    const elem = state.runnerMarker.getElement();
+    if(elem) {
+      const inner = elem.querySelector(".runner-marker");
+      if(inner) {
+        inner.style.transform = `rotate(${p.angle}deg)`;
+        inner.style.willChange = "transform";
+      }
+    }
+
+    // No recalculamos toda la línea cada frame. Esto mejora mucho la fluidez.
+    if(state.routeDoneLayer && state.routeLatLngs.length && (!state._lastDoneUpdate || performance.now() - state._lastDoneUpdate > 85)) {
+      const total = state.routeLatLngs.length;
+      const upto = Math.max(2, Math.floor(total * state.progress));
+      state.routeDoneLayer.setLatLngs(state.routeLatLngs.slice(0, upto));
+      state._lastDoneUpdate = performance.now();
+    }
+
+    // El marcador se mueve a 60 FPS; la cámara se actualiza menos para evitar recarga de mosaicos.
+    const now = performance.now();
+    const cameraInterval = state.smoothMode ? 180 : 90;
+    if(!state.lastCameraMove || now - state.lastCameraMove > cameraInterval) {
+      map.panTo([p.lat,p.lng], {animate:true, duration: state.smoothMode ? .32 : .20});
+      state.lastCameraMove = now;
+    }
+
+    updateStats();
+  }
+
+  function stopPlayback(resetUi=true) {
+    state.isPlaying = false;
+    if(state.animFrame) {
+      cancelAnimationFrame(state.animFrame);
+      state.animFrame = null;
+    }
+    if(resetUi && state.uiHidden) setStudioUI(false, false, false);
+  }
+
+  function resetCamera() {
+    stopPlayback(true);
+    state.progress = 0;
+    if(state.runnerMarker) {
+      map.removeLayer(state.runnerMarker);
+      state.runnerMarker = null;
+    }
+    if(state.routeDoneLayer) state.routeDoneLayer.setLatLngs([]);
+    updateStats();
+
+    if(state.routeLatLngs.length) {
+      const bounds = L.latLngBounds(state.routeLatLngs);
+      map.fitBounds(bounds, {paddingTopLeft:[45,110], paddingBottomRight:[440,50], maxZoom:CONFIG.maxSafeZoom});
+    } else {
+      map.flyTo([SCHOOL.lat,SCHOOL.lng], CONFIG.initialZoom, {duration:.75});
+    }
+    status("Cámara reiniciada.");
+  }
+
+  function setStudioUI(hidden, recordingMinimal=false, mapOnly=false) {
+    state.uiHidden = hidden;
+
+    document.body.classList.toggle("only-map-recording", hidden && mapOnly);
+
+    // Modo normal de navegación: solo ocultamos paneles principales si el usuario activó modo estudio.
+    el.captureOverlay.style.display = (hidden && !recordingMinimal && !mapOnly) ? "block" : "none";
+    el.recordHud.style.display = (hidden && recordingMinimal && !mapOnly) ? "block" : "none";
+
+    el.panel.style.display = hidden ? "none" : "";
+    el.searchbar.style.display = hidden ? "none" : "";
+    document.querySelector(".map-badge").style.display = hidden ? "none" : "";
+
+    // En grabación limpia también ocultamos logos, controles, escala y créditos visuales.
+    el.brandShell.style.display = hidden ? "none" : "";
+
+    setTimeout(repairMap, 120);
+    setTimeout(repairMap, 450);
+  }
+
+  async function recordRoute(mapOnly=false) {
+    const ok = await ensureRoute();
+    if(!ok) return;
+
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia || !window.MediaRecorder) {
+      toast("Este navegador no permite grabación interna. En iPhone/Android usa la grabadora nativa de pantalla; en computador usa Chrome/Edge.", true);
+      return;
+    }
+
+    try {
+      toast(mapOnly
+        ? "Selecciona la opción PESTAÑA / Esta pestaña. No selecciones Pantalla completa ni Ventana. Así no se graba la barra del navegador."
+        : "Selecciona esta pestaña/ventana. Durante la grabación se ocultará la interfaz.");
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: {
+          displaySurface: "browser",
+          frameRate: state.smoothMode ? 30 : 60,
+          width: {ideal: 1920},
+          height: {ideal: 1080}
+        },
+        audio: false,
+        preferCurrentTab: true,
+        selfBrowserSurface: "include",
+        surfaceSwitching: "include",
+        monitorTypeSurfaces: "include"
+      });
+
+      state.recordedChunks = [];
+      state.captureStream = stream;
+
+      const mime = MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
+        ? "video/webm;codecs=vp9"
+        : "video/webm";
+
+      state.mediaRecorder = new MediaRecorder(stream, {
+        mimeType:mime,
+        videoBitsPerSecond: state.smoothMode ? 6500000 : 10000000
+      });
+
+      state.mediaRecorder.ondataavailable = ev => {
+        if(ev.data && ev.data.size > 0) state.recordedChunks.push(ev.data);
+      };
+
+      state.mediaRecorder.onstop = () => {
+        const blob = new Blob(state.recordedChunks, {type:"video/webm"});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        const stamp = new Date().toISOString().replace(/[:.]/g,"-");
+        a.href = url;
+        a.download = `recorrido_san_pedro_route_studio_${stamp}.webm`;
+        document.body.appendChild(a);
+        a.click();
+
+        setTimeout(() => {
+          URL.revokeObjectURL(url);
+          a.remove();
+        }, 1000);
+
+        if(state.captureStream) {
+          state.captureStream.getTracks().forEach(t => t.stop());
+          state.captureStream = null;
+        }
+
+        setStudioUI(false, false, false);
+        status("Video generado en formato WebM.");
+      };
+
+      setStudioUI(true, !mapOnly, mapOnly);
+      state.mediaRecorder.start(500);
+      await playRoute(true);
+    } catch(e) {
+      setStudioUI(false);
+      toast("No se inició la grabación. El permiso pudo cancelarse o no seleccionaste la pestaña.");
+    }
+  }
+
+  function stopRecording() {
+    if(state.mediaRecorder && state.mediaRecorder.state === "recording") state.mediaRecorder.stop();
+  }
+
+  function getFeatureCollection() {
+    const features = [];
+    features.push({
+      type:"Feature",
+      properties:{name:SCHOOL.name, role:"start"},
+      geometry:{type:"Point", coordinates:[SCHOOL.lng,SCHOOL.lat]}
+    });
+
+    state.stops.forEach((s,i) => {
+      features.push({
+        type:"Feature",
+        properties:{name:s.label, role:"stop", order:i+1},
+        geometry:{type:"Point", coordinates:[s.lng,s.lat]}
+      });
+    });
+
+    if(state.routeLatLngs.length) {
+      features.push({
+        type:"Feature",
+        properties:{name:"Ruta San Pedro", distance_m:state.routeDistance, duration_s:state.routeDuration},
+        geometry:{type:"LineString", coordinates:state.routeLatLngs.map(p => [p.lng,p.lat])}
+      });
+    }
+
+    return {type:"FeatureCollection", features};
+  }
+
+  function downloadText(filename, content, type="text/plain") {
+    const blob = new Blob([content], {type});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      URL.revokeObjectURL(url);
+      a.remove();
+    }, 1000);
+  }
+
+  function exportGeoJSON() {
+    downloadText("ruta_san_pedro.geojson", JSON.stringify(getFeatureCollection(), null, 2), "application/geo+json");
+  }
+
+  function exportGPX() {
+    const pts = state.routeLatLngs.length ? state.routeLatLngs : [L.latLng(SCHOOL.lat,SCHOOL.lng), ...state.stops.map(s => L.latLng(s.lat,s.lng))];
+    const trkpts = pts.map(p => `    <trkpt lat="${p.lat.toFixed(7)}" lon="${p.lng.toFixed(7)}"></trkpt>`).join("\n");
+    const wpts = [`  <wpt lat="${SCHOOL.lat}" lon="${SCHOOL.lng}"><name>${escapeXml(SCHOOL.name)}</name></wpt>`]
+      .concat(state.stops.map((s,i) => `  <wpt lat="${s.lat.toFixed(7)}" lon="${s.lng.toFixed(7)}"><name>Parada ${i+1} - ${escapeXml(shortLabel(s.label))}</name></wpt>`))
+      .join("\n");
+    const gpx = `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="San Pedro Route Studio - Juan E. Perez" xmlns="http://www.topografix.com/GPX/1/1">\n${wpts}\n  <trk><name>Ruta San Pedro</name><trkseg>\n${trkpts}\n  </trkseg></trk>\n</gpx>`;
+    downloadText("ruta_san_pedro.gpx", gpx, "application/gpx+xml");
+  }
+
+  function exportKML() {
+    const coords = (state.routeLatLngs.length ? state.routeLatLngs : [L.latLng(SCHOOL.lat,SCHOOL.lng), ...state.stops.map(s => L.latLng(s.lat,s.lng))])
+      .map(p => `${p.lng.toFixed(7)},${p.lat.toFixed(7)},0`).join(" ");
+    const placemarks = [`<Placemark><name>${escapeXml(SCHOOL.name)}</name><Point><coordinates>${SCHOOL.lng},${SCHOOL.lat},0</coordinates></Point></Placemark>`]
+      .concat(state.stops.map((s,i) => `<Placemark><name>Parada ${i+1} - ${escapeXml(shortLabel(s.label))}</name><Point><coordinates>${s.lng.toFixed(7)},${s.lat.toFixed(7)},0</coordinates></Point></Placemark>`))
+      .join("\n");
+    const kml = `<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>Ruta San Pedro</name>${placemarks}<Placemark><name>Recorrido</name><LineString><tessellate>1</tessellate><coordinates>${coords}</coordinates></LineString></Placemark></Document></kml>`;
+    downloadText("ruta_san_pedro.kml", kml, "application/vnd.google-earth.kml+xml");
+  }
+
+  function escapeXml(s) {
+    return String(s).replace(/[<>&'"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;',"'":'&apos;','"':'&quot;'}[c]));
+  }
+
+  function saveLocal() {
+    const payload = state.stops.map(s => ({lat:s.lat,lng:s.lng,label:s.label}));
+    localStorage.setItem("sanPedroRouteStudioStops", JSON.stringify(payload));
+    toast("Ruta guardada localmente en este navegador.");
+  }
+
+  function loadLocal() {
+    const raw = localStorage.getItem("sanPedroRouteStudioStops");
+    if(!raw) {
+      toast("No hay ruta guardada en este navegador.");
+      return;
+    }
+    try {
+      clearStops();
+      const stops = JSON.parse(raw);
+      stops.forEach(s => addStop(s.lat, s.lng, s.label));
+      status("Ruta cargada desde memoria local.");
+    } catch(e) {
+      toast("No fue posible cargar la ruta guardada.");
+    }
+  }
+
+  function updateHash() {
+    const compact = state.stops.map(s => `${s.lat.toFixed(6)},${s.lng.toFixed(6)}`).join(";");
+    if(compact) {
+      const newUrl = `${location.pathname}#stops=${encodeURIComponent(compact)}`;
+      history.replaceState(null, "", newUrl);
+    } else {
+      history.replaceState(null, "", location.pathname);
+    }
+  }
+
+  function loadHash() {
+    const hash = location.hash || "";
+    const m = hash.match(/stops=([^&]+)/);
+    if(!m) return;
+    const decoded = decodeURIComponent(m[1]);
+    const parts = decoded.split(";").map(x => x.trim()).filter(Boolean);
+    parts.forEach((p, i) => {
+      const c = parseCoordinates(p);
+      if(c) addStop(c.lat,c.lng,`Parada compartida ${i+1}`);
+    });
+  }
+
+  async function shareLink() {
+    updateHash();
+    const url = location.href;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast("Enlace de la ruta copiado.");
+    } catch(e) {
+      toast(url, true);
+    }
+  }
+
+
+  async function openCleanFullscreenMode() {
+    // Ahora Pantalla limpia también inicia la grabación automática tipo solo mapa.
+    await autoRecordCleanMap();
+  }
+
+  async function autoRecordCleanMap() {
+    const ok = await ensureRoute();
+    if(!ok) return;
+
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia || !window.MediaRecorder) {
+      setStudioUI(true, false, true);
+      try {
+        if(!document.fullscreenElement) await document.documentElement.requestFullscreen?.();
+      } catch(e) {}
+      toast("Este navegador no permite grabación automática interna. Se activó pantalla limpia; usa la grabadora nativa del celular o del sistema.", true);
+      await playRoute(true);
+      return;
+    }
+
+    try {
+      if(el.recordPermission) el.recordPermission.style.display = "flex";
+
+      // Primero se solicita permiso. El navegador SIEMPRE mostrará su selector por seguridad.
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: {
+          displaySurface: "browser",
+          frameRate: state.smoothMode ? 30 : 60,
+          width: {ideal: 1920},
+          height: {ideal: 1080}
+        },
+        audio: false,
+        preferCurrentTab: true,
+        selfBrowserSurface: "include",
+        surfaceSwitching: "include",
+        monitorTypeSurfaces: "include"
+      });
+
+      if(el.recordPermission) el.recordPermission.style.display = "none";
+
+      state.recordedChunks = [];
+      state.captureStream = stream;
+
+      const mime = MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
+        ? "video/webm;codecs=vp9"
+        : "video/webm";
+
+      state.mediaRecorder = new MediaRecorder(stream, {
+        mimeType:mime,
+        videoBitsPerSecond: state.smoothMode ? 6500000 : 10000000
+      });
+
+      state.mediaRecorder.ondataavailable = ev => {
+        if(ev.data && ev.data.size > 0) state.recordedChunks.push(ev.data);
+      };
+
+      state.mediaRecorder.onstop = () => {
+        const blob = new Blob(state.recordedChunks, {type:"video/webm"});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        const stamp = new Date().toISOString().replace(/[:.]/g,"-");
+        a.href = url;
+        a.download = `recorrido_solo_mapa_san_pedro_${stamp}.webm`;
+        document.body.appendChild(a);
+        a.click();
+
+        setTimeout(() => {
+          URL.revokeObjectURL(url);
+          a.remove();
+        }, 1000);
+
+        if(state.captureStream) {
+          state.captureStream.getTracks().forEach(t => t.stop());
+          state.captureStream = null;
+        }
+
+        setStudioUI(false, false, false);
+        if(el.recordPermission) el.recordPermission.style.display = "none";
+        status("Video limpio generado automáticamente. En el archivo debe verse solo el mapa, la ruta y el cursor.");
+      };
+
+      // Ocultamos absolutamente toda la interfaz antes de arrancar la grabación.
+      setStudioUI(true, false, true);
+      try {
+        if(!document.fullscreenElement) await document.documentElement.requestFullscreen?.();
+      } catch(e) {}
+
+      repairMap();
+      await new Promise(resolve => setTimeout(resolve, 650));
+
+      state.mediaRecorder.start(500);
+      await playRoute(true);
+
+    } catch(e) {
+      if(el.recordPermission) el.recordPermission.style.display = "none";
+      setStudioUI(false, false, false);
+      toast("No se inició la grabación. Recuerda seleccionar “Esta pestaña” cuando el navegador lo solicite.", true);
+    }
+  }
+
+
+  function isMobileViewport() {
+    return window.matchMedia("(max-width: 980px)").matches;
+  }
+
+  function openMobilePanel() {
+    if(el.panel) el.panel.classList.add("open");
+  }
+
+  function closeMobilePanel() {
+    if(el.panel) el.panel.classList.remove("open");
+  }
+
+  function toggleMobilePanel() {
+    if(!el.panel) return;
+    el.panel.classList.toggle("open");
+  }
+
+  function showInstallHintOnce() {
+    if(!isMobileViewport()) return;
+    if(localStorage.getItem("sanPedroInstallHintSeen") === "1") return;
+    setTimeout(() => {
+      if(el.installHint) el.installHint.style.display = "block";
+    }, 1800);
+  }
+
+  function closeInstallHint() {
+    localStorage.setItem("sanPedroInstallHintSeen", "1");
+    if(el.installHint) el.installHint.style.display = "none";
+  }
+
+  function mobileSafeInvalidate() {
+    const h = window.innerHeight || document.documentElement.clientHeight;
+    document.getElementById("map").style.height = h + "px";
+    repairMap();
+  }
+
+
+  el.searchBtn.addEventListener("click", searchAndMaybeAdd);
+  el.searchInput.addEventListener("keydown", ev => {
+    if(ev.key === "Enter") searchAndMaybeAdd();
+    if(ev.key === "Escape") clearResults();
+  });
+
+  el.clickModeBtn.addEventListener("click", () => {
+    state.clickMode = !state.clickMode;
+    el.clickModeBtn.textContent = `Clic: ${state.clickMode ? "ON" : "OFF"}`;
+    el.clickModeBtn.classList.toggle("primary", state.clickMode);
+    status(state.clickMode ? "Modo clic activo: cada clic se agregará como parada." : "Modo clic desactivado: los clics solo identifican direcciones.");
+  });
+
+  el.fullscreenBtn.addEventListener("click", toggleFullscreen);
+  el.realisticBtn.addEventListener("click", () => useRealistic(true));
+  el.streetsBtn.addEventListener("click", () => useStreets(true));
+  el.repairBtn.addEventListener("click", () => {
+    state.tileErrors = 0;
+    repairMap();
+    status("Mapa reparado. Si ves mosaicos incompletos, cambia a Calles y vuelve a Realista.");
+  });
+  el.locateBtn.addEventListener("click", locateUser);
+  el.routeBtn.addEventListener("click", () => calculateRoute(true));
+  el.clearBtn.addEventListener("click", clearStops);
+  el.saveBtn.addEventListener("click", saveLocal);
+  el.loadBtn.addEventListener("click", loadLocal);
+  el.googleBtn.addEventListener("click", () => openProvider("google"));
+  el.wazeBtn.addEventListener("click", () => openProvider("waze"));
+  el.shareBtn.addEventListener("click", shareLink);
+  el.playBtn.addEventListener("click", () => playRoute(true));
+  el.pauseBtn.addEventListener("click", () => {
+    stopPlayback(true);
+    status("Recorrido pausado.");
+  });
+  el.resetVideoBtn.addEventListener("click", resetCamera);
+  el.recordBtn.addEventListener("click", () => recordRoute(false));
+  el.recordMapOnlyBtn.addEventListener("click", () => recordRoute(true));
+  el.fullscreenCleanBtn.addEventListener("click", openCleanFullscreenMode);
+  el.geojsonBtn.addEventListener("click", exportGeoJSON);
+  el.gpxBtn.addEventListener("click", exportGPX);
+  el.kmlBtn.addEventListener("click", exportKML);
+
+  el.speedRange.addEventListener("input", () => el.speedLabel.textContent = `${el.speedRange.value}x`);
+  el.zoomRange.addEventListener("input", () => el.zoomLabel.textContent = el.zoomRange.value);
+  el.studioToggle.addEventListener("click", () => {
+    state.studioMode = !state.studioMode;
+    el.studioToggle.classList.toggle("on", state.studioMode);
+  });
+
+  el.smoothToggle.addEventListener("click", () => {
+    state.smoothMode = !state.smoothMode;
+    el.smoothToggle.classList.toggle("on", state.smoothMode);
+    status(state.smoothMode
+      ? "Modo rendimiento activo: cámara suavizada, menos recarga de mosaicos y grabación más estable."
+      : "Modo rendimiento desactivado: cámara más directa, pero puede exigir más al computador.");
+  });
+
+
+  if(el.mobilePanelBtn) el.mobilePanelBtn.addEventListener("click", toggleMobilePanel);
+  if(el.mRouteBtn) el.mRouteBtn.addEventListener("click", () => { openMobilePanel(); calculateRoute(true); });
+  if(el.mPlayBtn) el.mPlayBtn.addEventListener("click", () => { closeMobilePanel(); playRoute(true); });
+  if(el.mRealBtn) el.mRealBtn.addEventListener("click", () => useRealistic(true));
+  if(el.mStreetBtn) el.mStreetBtn.addEventListener("click", () => useStreets(true));
+  if(el.mGoogleBtn) el.mGoogleBtn.addEventListener("click", () => openProvider("google"));
+  if(el.installCloseBtn) el.installCloseBtn.addEventListener("click", closeInstallHint);
+
+  window.addEventListener("resize", mobileSafeInvalidate);
+  window.addEventListener("orientationchange", () => setTimeout(mobileSafeInvalidate, 500));
+
+  // PWA service worker: solo funciona publicado en HTTPS, como GitHub Pages.
+  if("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  }
+
+  showInstallHintOnce();
+
+
+  map.on("click", handleMapClick);
+  document.addEventListener("fullscreenchange", () => setTimeout(repairMap, 260));
+  window.addEventListener("resize", repairMap);
+  window.addEventListener("orientationchange", () => setTimeout(repairMap, 520));
+
+  if(window.ResizeObserver) {
+    const ro = new ResizeObserver(() => repairMap());
+    ro.observe(el.map);
+  }
+
+  requestAnimationFrame(repairMap);
+  setTimeout(repairMap, 250);
+  setTimeout(repairMap, 800);
+  setTimeout(repairMap, 1600);
+  setTimeout(repairMap, 2900);
+
+  map.whenReady(() => {
+    repairMap();
+    map.fitBounds(CONFIG.sanPedroBounds, {padding:[40,40], maxZoom:CONFIG.maxSafeZoom});
+    setTimeout(() => {
+      map.flyTo([SCHOOL.lat,SCHOOL.lng], CONFIG.initialZoom, {duration:.85});
+      schoolMarker.openPopup();
+    }, 900);
+    hideLoader();
+    renderStops();
+    loadHash();
+  });
+
+})();
+</script>
+
+<script>
+  function setDualPreference(view){
+    try{localStorage.setItem("sprs_dual_view", view);}catch(e){}
+  }
+</script>
+
+<a class="dual-switch-btn" href="mobile.html" onclick="setDualPreference('mobile')">Abrir versión móvil</a>
+</body>
+</html>

@@ -1,33 +1,25 @@
-# San Pedro Route Studio - Mobile Maps UI
+# San Pedro Route Studio Dual
 
-Versión móvil inspirada en la navegabilidad de apps de mapas modernas.
+Este paquete contiene las dos versiones:
 
-## Enfoque
+- `desktop.html`: versión PC completa, tipo Google Maps para computador.
+- `mobile.html`: versión móvil para iOS y Android, con interfaz tipo Google Maps móvil.
+- `index.html`: detecta automáticamente el dispositivo y abre la versión correcta.
 
-La app prioriza que el mapa se vea completo en celular:
-- Buscador flotante superior.
-- Chips de capas sobre el mapa.
-- Botones laterales flotantes.
-- Panel inferior desplegable tipo bottom sheet.
-- Estados: minimizado, medio y completo.
-- Mapa realista inicial.
-- Menú no invade la pantalla hasta que el usuario lo despliegue.
+## Cómo publicar en GitHub Pages
 
-## Funciones
+1. Sube todo el contenido del ZIP a la raíz del repositorio.
+2. Activa GitHub Pages en Settings > Pages.
+3. Abre la URL principal del sitio.
+4. La app abrirá automáticamente PC o móvil según el dispositivo.
 
-- Mapa realista.
-- Vista de calles.
-- Etiquetas propias livianas.
-- Buscar destinos.
-- Agregar paradas.
-- Calcular ruta.
-- Navegación animada.
-- Google Maps y Waze.
-- Guardar, cargar y compartir.
-- Exportar GeoJSON, GPX, KML.
-- Pantalla limpia para grabación nativa del celular.
-- PWA instalable en iOS y Android.
+## Acceso manual
 
-## Publicación
+- Para PC: `desktop.html`
+- Para celular: `mobile.html`
+- Desde la portada: botones “Abrir versión PC” y “Abrir versión móvil”.
 
-Sube todos los archivos a GitHub Pages.
+## Importante
+
+La versión PC no fue reemplazada. Se conserva como `desktop.html`.
+La versión móvil funciona aparte como `mobile.html`.

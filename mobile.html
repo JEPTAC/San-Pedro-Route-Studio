@@ -1,0 +1,1392 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#071f43">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="San Pedro Route">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>San Pedro Route Studio · Mobile Maps UI</title>
+
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="assets/logo-san-pedro.png">
+  <link rel="icon" href="assets/logo-san-pedro.png">
+  <link rel="preconnect" href="https://unpkg.com" crossorigin>
+  <link rel="preconnect" href="https://server.arcgisonline.com" crossorigin>
+  <link rel="preconnect" href="https://tile.openstreetmap.org" crossorigin>
+  <link rel="preconnect" href="https://router.project-osrm.org" crossorigin>
+  <link rel="preconnect" href="https://nominatim.openstreetmap.org" crossorigin>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+  <style>
+    :root{
+      --navy:#071f43;
+      --blue:#0b6ff5;
+      --cyan:#27d7ff;
+      --orange:#fc4c02;
+      --gold:#ffc400;
+      --green:#19a463;
+      --red:#e93545;
+      --ink:#142544;
+      --muted:#64738a;
+      --line:#dbe8f7;
+      --panel:rgba(255,255,255,.96);
+      --shadow:0 12px 32px rgba(5,26,55,.22);
+      --safe-top:env(safe-area-inset-top,0px);
+      --safe-bottom:env(safe-area-inset-bottom,0px);
+      --sheet-peek:118px;
+      --sheet-mid:46dvh;
+      --sheet-full:82dvh;
+    }
+
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    html,body{
+      margin:0;
+      width:100%;
+      height:100%;
+      overflow:hidden;
+      background:#dce8f5;
+      color:var(--ink);
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+      touch-action:manipulation;
+      overscroll-behavior:none;
+    }
+    #app,#map{
+      position:fixed;
+      inset:0;
+      width:100vw;
+      height:100dvh;
+      min-height:100vh;
+    }
+    #map{z-index:1;background:#dce8f5}
+    .leaflet-container{
+      width:100% !important;
+      height:100% !important;
+      background:#dce8f5;
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    }
+    .leaflet-tile{will-change:auto}
+    .leaflet-control-zoom{display:none !important}
+    .leaflet-control-attribution{font-size:9px !important}
+    .leaflet-control-layers{display:none !important}
+
+    button,input{
+      font-family:inherit;
+    }
+    button{
+      border:0;
+      cursor:pointer;
+      font-weight:800;
+    }
+
+    .top-search{
+      position:absolute;
+      z-index:900;
+      left:12px;
+      right:12px;
+      top:calc(10px + var(--safe-top));
+      display:grid;
+      grid-template-columns:42px 1fr 42px;
+      gap:8px;
+      align-items:center;
+      height:58px;
+      padding:8px;
+      border-radius:28px;
+      background:rgba(255,255,255,.98);
+      box-shadow:0 10px 26px rgba(5,26,55,.20);
+      border:1px solid rgba(219,232,247,.95);
+      backdrop-filter:blur(14px);
+    }
+    .logo-dot{
+      width:42px;
+      height:42px;
+      border-radius:50%;
+      background:#fff;
+      display:grid;
+      place-items:center;
+      box-shadow:inset 0 0 0 1px #e2ecf7;
+      overflow:hidden;
+    }
+    .logo-dot img{
+      max-width:34px;
+      max-height:34px;
+      object-fit:contain;
+    }
+    .search-input{
+      height:42px;
+      min-width:0;
+      border:0;
+      outline:0;
+      color:#172844;
+      font-size:15px;
+      background:transparent;
+      padding:0 2px;
+    }
+    .search-input::placeholder{color:#6b7890}
+    .round-btn{
+      width:42px;
+      height:42px;
+      border-radius:50%;
+      background:#edf5ff;
+      color:var(--navy);
+      display:grid;
+      place-items:center;
+      font-size:18px;
+      box-shadow:inset 0 0 0 1px #d6e5f7;
+    }
+
+    .results{
+      position:absolute;
+      z-index:930;
+      left:12px;
+      right:12px;
+      top:calc(78px + var(--safe-top));
+      max-height:42dvh;
+      overflow:auto;
+      display:none;
+      border-radius:22px;
+      background:#fff;
+      border:1px solid var(--line);
+      box-shadow:var(--shadow);
+    }
+    .result{
+      padding:13px 15px;
+      border-bottom:1px solid #edf2f8;
+      font-size:13px;
+      line-height:1.35;
+    }
+    .result:last-child{border-bottom:0}
+    .result strong{display:block;color:#0b2651;margin-bottom:3px}
+    .result span{display:block;color:#65738a}
+
+    .right-tools{
+      position:absolute;
+      z-index:850;
+      right:12px;
+      top:calc(84px + var(--safe-top));
+      display:grid;
+      gap:10px;
+    }
+    .tool-btn{
+      width:48px;
+      height:48px;
+      border-radius:18px;
+      background:#fff;
+      color:#0b2651;
+      box-shadow:0 10px 22px rgba(5,26,55,.18);
+      border:1px solid #dfe9f6;
+      font-size:20px;
+      display:grid;
+      place-items:center;
+    }
+    .tool-btn.active{
+      background:linear-gradient(135deg,#0d3978,#061a38);
+      color:#fff;
+    }
+
+    .map-chipbar{
+      position:absolute;
+      z-index:840;
+      left:12px;
+      right:72px;
+      top:calc(84px + var(--safe-top));
+      display:flex;
+      gap:8px;
+      overflow-x:auto;
+      scrollbar-width:none;
+      padding-bottom:4px;
+      pointer-events:auto;
+    }
+    .map-chipbar::-webkit-scrollbar{display:none}
+    .chip{
+      flex:0 0 auto;
+      height:38px;
+      padding:0 13px;
+      border-radius:999px;
+      background:#fff;
+      color:#0b2651;
+      border:1px solid #dfe9f6;
+      box-shadow:0 8px 20px rgba(5,26,55,.15);
+      font-size:12px;
+      white-space:nowrap;
+    }
+    .chip.active{
+      background:linear-gradient(135deg,#0d3978,#061a38);
+      color:#fff;
+      border-color:#0d3978;
+    }
+    .chip.orange{
+      background:linear-gradient(135deg,#ff9537,#fc4c02);
+      color:#fff;
+      border-color:#fc4c02;
+    }
+
+    .nav-pill{
+      position:absolute;
+      z-index:845;
+      left:12px;
+      bottom:calc(var(--sheet-peek) + 18px + var(--safe-bottom));
+      display:none;
+      align-items:center;
+      gap:9px;
+      padding:9px 12px;
+      border-radius:999px;
+      background:rgba(7,31,67,.94);
+      color:#fff;
+      box-shadow:0 12px 30px rgba(5,26,55,.25);
+      backdrop-filter:blur(12px);
+      font-size:13px;
+      font-weight:800;
+    }
+    .nav-pill b{font-size:15px}
+    .nav-pill span{color:rgba(255,255,255,.75);font-weight:700}
+
+    .sheet{
+      position:absolute;
+      z-index:910;
+      left:0;
+      right:0;
+      bottom:0;
+      height:var(--sheet-full);
+      transform:translateY(calc(var(--sheet-full) - var(--sheet-peek) - var(--safe-bottom)));
+      transition:transform .25s cubic-bezier(.2,.8,.2,1);
+      pointer-events:none;
+      padding:0 8px calc(8px + var(--safe-bottom));
+    }
+    .sheet.mid{
+      transform:translateY(calc(var(--sheet-full) - var(--sheet-mid) - var(--safe-bottom)));
+    }
+    .sheet.full{
+      transform:translateY(0);
+    }
+    .sheet-inner{
+      pointer-events:auto;
+      height:100%;
+      border-radius:28px 28px 22px 22px;
+      background:rgba(255,255,255,.98);
+      border:1px solid rgba(219,232,247,.95);
+      box-shadow:0 -12px 40px rgba(5,26,55,.22);
+      backdrop-filter:blur(16px);
+      overflow:hidden;
+      display:grid;
+      grid-template-rows:auto auto 1fr;
+    }
+    .handle-zone{
+      padding:9px 0 5px;
+      display:grid;
+      place-items:center;
+    }
+    .handle{
+      width:52px;
+      height:5px;
+      border-radius:99px;
+      background:#cbd9e9;
+    }
+    .summary{
+      padding:0 14px 12px;
+    }
+    .summary-top{
+      display:grid;
+      grid-template-columns:1fr auto;
+      gap:12px;
+      align-items:center;
+    }
+    .summary-title{
+      min-width:0;
+    }
+    .summary-title h1{
+      margin:0;
+      color:var(--navy);
+      font-size:18px;
+      letter-spacing:-.03em;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .summary-title p{
+      margin:3px 0 0;
+      color:var(--muted);
+      font-size:12px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .main-action{
+      height:46px;
+      padding:0 16px;
+      border-radius:23px;
+      background:linear-gradient(135deg,#ff9537,#fc4c02);
+      color:#fff;
+      box-shadow:0 9px 20px rgba(252,76,2,.28);
+      white-space:nowrap;
+    }
+    .metrics{
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:8px;
+      margin-top:10px;
+    }
+    .metric{
+      padding:10px 8px;
+      border-radius:18px;
+      background:#f4f8fd;
+      border:1px solid #e2ecf7;
+      text-align:center;
+      min-width:0;
+    }
+    .metric b{
+      display:block;
+      font-size:19px;
+      line-height:1;
+      color:#0b2651;
+      letter-spacing:-.03em;
+    }
+    .metric small{
+      display:block;
+      margin-top:4px;
+      font-size:10px;
+      color:#6c7890;
+      font-weight:700;
+    }
+    .progress{
+      height:7px;
+      border-radius:99px;
+      overflow:hidden;
+      background:#e5eef8;
+      margin-top:10px;
+    }
+    .progress span{
+      display:block;
+      height:100%;
+      width:0%;
+      border-radius:99px;
+      background:linear-gradient(90deg,#ffc400,#fc4c02);
+    }
+    .sheet-body{
+      overflow:auto;
+      padding:0 14px 14px;
+      -webkit-overflow-scrolling:touch;
+    }
+    .status{
+      padding:10px 12px;
+      border-radius:18px;
+      background:#eef6ff;
+      border:1px solid #d4e8ff;
+      color:#24476f;
+      font-size:12px;
+      line-height:1.35;
+      margin:2px 0 12px;
+    }
+    .section{
+      margin:13px 0 7px;
+      color:var(--navy);
+      font-size:10px;
+      letter-spacing:.08em;
+      font-weight:900;
+      text-transform:uppercase;
+    }
+    .actions-grid{
+      display:grid;
+      grid-template-columns:repeat(4,1fr);
+      gap:9px;
+    }
+    .action{
+      min-height:64px;
+      border-radius:20px;
+      background:#f7fbff;
+      color:#0b2651;
+      border:1px solid #e1ebf7;
+      display:grid;
+      place-items:center;
+      gap:3px;
+      padding:8px 4px;
+      font-size:10.5px;
+      line-height:1.1;
+      text-align:center;
+    }
+    .action i{
+      display:block;
+      font-style:normal;
+      font-size:21px;
+      line-height:1;
+    }
+    .action.primary{
+      background:linear-gradient(135deg,#ffe071,#ffc400);
+      border-color:#ffc400;
+    }
+    .action.dark{
+      background:linear-gradient(135deg,#0d3978,#061a38);
+      color:#fff;
+      border-color:#0d3978;
+    }
+    .action.danger{
+      background:#fff1ef;
+      border-color:#ffc9c4;
+      color:#9b1c12;
+    }
+
+    .stops{
+      display:grid;
+      gap:8px;
+      margin-top:8px;
+    }
+    .stop{
+      display:grid;
+      grid-template-columns:30px 1fr auto;
+      gap:9px;
+      align-items:center;
+      padding:10px;
+      border-radius:18px;
+      background:#f8fbff;
+      border:1px solid #dfe9f6;
+    }
+    .stop-num{
+      width:30px;
+      height:30px;
+      border-radius:50%;
+      display:grid;
+      place-items:center;
+      background:#0b6ff5;
+      color:#fff;
+      font-size:12px;
+      font-weight:900;
+    }
+    .stop strong{
+      display:block;
+      color:#0b2651;
+      font-size:12px;
+      margin-bottom:2px;
+    }
+    .stop small{
+      display:block;
+      color:#66748b;
+      font-size:11px;
+      word-break:break-word;
+    }
+    .mini{
+      width:32px;
+      height:32px;
+      border-radius:12px;
+      background:#fff;
+      color:#9b1c12;
+      border:1px solid #ffc9c4;
+      font-size:18px;
+    }
+    .creator{
+      display:grid;
+      grid-template-columns:46px 1fr;
+      gap:10px;
+      align-items:center;
+      margin-top:12px;
+      padding:10px;
+      border-radius:18px;
+      background:#fff;
+      border:1px solid #e1ebf7;
+      color:#65758f;
+      font-size:11px;
+    }
+    .creator img{
+      width:46px;
+      height:40px;
+      object-fit:contain;
+    }
+    .creator strong{
+      display:block;
+      color:#0b2651;
+      font-size:12px;
+      margin-bottom:2px;
+    }
+
+    .toast{
+      position:absolute;
+      z-index:1600;
+      left:14px;
+      right:14px;
+      bottom:calc(var(--sheet-peek) + 18px + var(--safe-bottom));
+      display:none;
+      padding:12px 14px;
+      border-radius:20px;
+      background:#fff7ed;
+      border:1px solid #fed7aa;
+      color:#7c2d12;
+      box-shadow:var(--shadow);
+      font-size:13px;
+      line-height:1.35;
+    }
+    .loading{
+      position:absolute;
+      inset:0;
+      z-index:1700;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:linear-gradient(135deg,rgba(218,231,245,.98),rgba(246,249,253,.9));
+      transition:.25s ease;
+    }
+    .loading.hide{opacity:0;visibility:hidden}
+    .loader{
+      width:min(310px,calc(100vw - 44px));
+      padding:20px;
+      border-radius:24px;
+      background:#fff;
+      border:1px solid #dce8f5;
+      box-shadow:var(--shadow);
+      text-align:center;
+    }
+    .loader img{
+      max-height:62px;
+      max-width:160px;
+      object-fit:contain;
+      margin-bottom:12px;
+    }
+    .loader h1{
+      margin:0 0 8px;
+      font-size:18px;
+      color:var(--navy);
+    }
+    .loader p{
+      margin:0;
+      font-size:12px;
+      color:var(--muted);
+      line-height:1.42;
+    }
+
+    .school-marker{
+      width:30px;height:30px;border-radius:50%;
+      background:var(--red);
+      border:5px solid #fff;
+      box-shadow:0 8px 22px rgba(233,53,69,.35),0 0 0 8px rgba(233,53,69,.16);
+    }
+    .stop-marker{
+      width:28px;height:28px;border-radius:50%;
+      background:linear-gradient(135deg,#0b6ff5,#27d7ff);
+      border:4px solid #fff;
+      display:grid;place-items:center;
+      color:#fff;font-size:11px;font-weight:900;
+      box-shadow:0 8px 20px rgba(11,111,245,.32);
+    }
+    .runner-marker{
+      width:42px;height:42px;border-radius:50%;
+      background:linear-gradient(135deg,#ff9537,#fc4c02);
+      border:4px solid #fff;
+      display:grid;place-items:center;
+      color:#fff;font-size:20px;
+      box-shadow:0 12px 28px rgba(252,76,2,.42),0 0 0 9px rgba(252,76,2,.15);
+      transform-origin:center;
+    }
+
+    body.clean .top-search,
+    body.clean .right-tools,
+    body.clean .map-chipbar,
+    body.clean .sheet,
+    body.clean .nav-pill,
+    body.clean .leaflet-control-container{
+      display:none !important;
+    }
+
+    @media (orientation:landscape) and (max-height:560px){
+      .top-search{right:auto;width:410px}
+      .map-chipbar{left:12px;top:calc(78px + var(--safe-top));right:auto;width:410px}
+      .right-tools{top:calc(10px + var(--safe-top))}
+      .sheet{
+        left:auto;
+        width:390px;
+        height:calc(100dvh - 16px);
+        transform:translateX(calc(100% - 104px));
+        padding:8px 8px 8px 0;
+      }
+      .sheet.mid,.sheet.full{transform:translateX(0)}
+      .sheet-inner{border-radius:28px}
+      .toast{left:14px;right:auto;width:410px;bottom:18px}
+    }
+  </style>
+
+<style>
+  .dual-switch-btn{
+    position:fixed;
+    z-index:5000;
+    left:12px;
+    bottom:calc(128px + env(safe-area-inset-bottom,0px));
+    height:38px;
+    padding:0 12px;
+    border-radius:999px;
+    background:rgba(7,31,67,.92);
+    color:#fff !important;
+    text-decoration:none;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    font-size:11px;
+    font-weight:900;
+    box-shadow:0 10px 24px rgba(4,23,51,.24);
+    border:1px solid rgba(255,255,255,.18);
+    backdrop-filter:blur(10px);
+  }
+  body.clean .dual-switch-btn{display:none!important}
+</style>
+
+</head>
+
+<body>
+<div id="app">
+  <div id="map"></div>
+
+  <div class="loading" id="loading">
+    <div class="loader">
+      <img src="assets/logo-san-pedro.png" alt="San Pedro">
+      <h1>San Pedro Route Studio</h1>
+      <p>Interfaz móvil tipo app de mapas: buscador, mapa amplio y panel desplegable.</p>
+    </div>
+  </div>
+
+  <div class="top-search">
+    <div class="logo-dot"><img src="assets/logo-alcaldia.png" alt="Alcaldía"></div>
+    <input class="search-input" id="searchInput" placeholder="Buscar en San Pedro...">
+    <button class="round-btn" id="searchBtn">⌕</button>
+  </div>
+
+  <div class="results" id="results"></div>
+
+  <div class="map-chipbar">
+    <button class="chip active" id="realChip">Realista</button>
+    <button class="chip" id="streetChip">Calles</button>
+    <button class="chip" id="trafficChip">Etiquetas</button>
+    <button class="chip orange" id="routeChip">Calcular ruta</button>
+  </div>
+
+  <div class="right-tools">
+    <button class="tool-btn" id="locateBtn">⌖</button>
+    <button class="tool-btn" id="fitBtn">□</button>
+    <button class="tool-btn" id="clickBtn">＋</button>
+  </div>
+
+  <div class="nav-pill" id="navPill">
+    <b id="navKm">0.00 km</b>
+    <span id="navPct">0%</span>
+  </div>
+
+  <section class="sheet" id="sheet">
+    <div class="sheet-inner">
+      <div class="handle-zone" id="handleZone"><div class="handle"></div></div>
+
+      <div class="summary">
+        <div class="summary-top">
+          <div class="summary-title">
+            <h1 id="summaryTitle">Recorrido San Pedro</h1>
+            <p id="summarySub">Desde Colegio José Antonio Aguilera</p>
+          </div>
+          <button class="main-action" id="playBtn">Navegar</button>
+        </div>
+
+        <div class="metrics">
+          <div class="metric"><b id="km">0.00</b><small>km</small></div>
+          <div class="metric"><b id="min">0</b><small>min</small></div>
+          <div class="metric"><b id="stopsCount">0</b><small>paradas</small></div>
+        </div>
+        <div class="progress"><span id="progressBar"></span></div>
+      </div>
+
+      <div class="sheet-body">
+        <div class="status" id="status">
+          Mapa realista activo. El panel se despliega como una app de mapas: toca la barra superior para abrir o cerrar.
+        </div>
+
+        <div class="section">Acciones</div>
+        <div class="actions-grid">
+          <button class="action primary" id="routeBtn"><i>↗</i>Ruta</button>
+          <button class="action" id="googleBtn"><i>G</i>Google</button>
+          <button class="action" id="wazeBtn"><i>W</i>Waze</button>
+          <button class="action" id="shareBtn"><i>⤴</i>Compartir</button>
+          <button class="action" id="saveBtn"><i>💾</i>Guardar</button>
+          <button class="action" id="loadBtn"><i>↺</i>Cargar</button>
+          <button class="action dark" id="cleanBtn"><i>▣</i>Limpia</button>
+          <button class="action danger" id="clearBtn"><i>×</i>Limpiar</button>
+        </div>
+
+        <div class="section">Exportar</div>
+        <div class="actions-grid">
+          <button class="action" id="geoBtn"><i>{ }</i>GeoJSON</button>
+          <button class="action" id="gpxBtn"><i>GPX</i>GPX</button>
+          <button class="action" id="kmlBtn"><i>KML</i>KML</button>
+          <button class="action" id="pauseBtn"><i>Ⅱ</i>Pausar</button>
+        </div>
+
+        <div class="section">Paradas</div>
+        <div class="stops" id="stops"></div>
+
+        <div class="creator">
+          <img src="assets/logo-jept.png" alt="JEPT">
+          <div><strong>Creador y desarrollador</strong>Juan E. Pérez</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  const SCHOOL = {name:"Colegio José Antonio Aguilera", lat:3.99712, lng:-76.22930};
+  const MAX_ZOOM = 18;
+  const START_ZOOM = 17;
+  const BOUNDS = [[3.94,-76.31],[4.06,-76.14]];
+  const SAN_PEDRO_BOUNDS = [[3.9820,-76.2470],[4.0115,-76.2070]];
+
+  const state = {
+    stops:[],
+    clickMode:false,
+    labelsOn:true,
+    activeLayer:"real",
+    sheetState:"peek",
+    routeLayer:null,
+    doneLayer:null,
+    routeLatLngs:[],
+    routeDistance:0,
+    routeDuration:0,
+    routeMetrics:[],
+    routeTotal:0,
+    runner:null,
+    playing:false,
+    progress:0,
+    lastFrame:0,
+    lastCamera:0,
+    tileErrors:0,
+    searchBusy:false
+  };
+
+  const el = {
+    map: gid("map"),
+    loading:gid("loading"),
+    searchInput:gid("searchInput"),
+    searchBtn:gid("searchBtn"),
+    results:gid("results"),
+    realChip:gid("realChip"),
+    streetChip:gid("streetChip"),
+    trafficChip:gid("trafficChip"),
+    routeChip:gid("routeChip"),
+    locateBtn:gid("locateBtn"),
+    fitBtn:gid("fitBtn"),
+    clickBtn:gid("clickBtn"),
+    navPill:gid("navPill"),
+    navKm:gid("navKm"),
+    navPct:gid("navPct"),
+    sheet:gid("sheet"),
+    handleZone:gid("handleZone"),
+    summaryTitle:gid("summaryTitle"),
+    summarySub:gid("summarySub"),
+    playBtn:gid("playBtn"),
+    km:gid("km"),
+    min:gid("min"),
+    stopsCount:gid("stopsCount"),
+    progressBar:gid("progressBar"),
+    status:gid("status"),
+    routeBtn:gid("routeBtn"),
+    googleBtn:gid("googleBtn"),
+    wazeBtn:gid("wazeBtn"),
+    shareBtn:gid("shareBtn"),
+    saveBtn:gid("saveBtn"),
+    loadBtn:gid("loadBtn"),
+    cleanBtn:gid("cleanBtn"),
+    clearBtn:gid("clearBtn"),
+    geoBtn:gid("geoBtn"),
+    gpxBtn:gid("gpxBtn"),
+    kmlBtn:gid("kmlBtn"),
+    pauseBtn:gid("pauseBtn"),
+    stops:gid("stops"),
+    toast:gid("toast")
+  };
+  function gid(id){return document.getElementById(id)}
+
+  if(!window.L){
+    showToast("No se pudo cargar el motor del mapa. Revisa conexión.", true);
+    return;
+  }
+
+  const map = L.map("map",{
+    center:[SCHOOL.lat,SCHOOL.lng],
+    zoom:START_ZOOM,
+    minZoom:12,
+    maxZoom:MAX_ZOOM,
+    maxBounds:BOUNDS,
+    maxBoundsViscosity:.35,
+    preferCanvas:true,
+    zoomControl:false,
+    attributionControl:true,
+    tap:true,
+    inertia:true,
+    zoomSnap:.25,
+    wheelDebounceTime:60
+  });
+
+  map.createPane("routePane"); map.getPane("routePane").style.zIndex=640;
+  map.createPane("donePane"); map.getPane("donePane").style.zIndex=650;
+  map.createPane("topPane"); map.getPane("topPane").style.zIndex=700;
+
+  const common = {
+    maxZoom:MAX_ZOOM,
+    maxNativeZoom:MAX_ZOOM,
+    keepBuffer:5,
+    updateWhenIdle:false,
+    updateWhenZooming:false,
+    detectRetina:false,
+    crossOrigin:true,
+    errorTileUrl:"data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="
+  };
+
+  const satellite = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{
+    ...common,
+    attribution:"Imagery © Esri"
+  });
+  const streets = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+    ...common,
+    subdomains:"abc",
+    attribution:"© OpenStreetMap"
+  });
+  const labels = L.layerGroup();
+
+  satellite.addTo(map);
+
+  const schoolIcon = L.divIcon({className:"",html:'<div class="school-marker"></div>',iconSize:[30,30],iconAnchor:[15,15]});
+  const schoolMarker = L.marker([SCHOOL.lat,SCHOOL.lng],{icon:schoolIcon,pane:"topPane",zIndexOffset:1000})
+    .addTo(map).bindPopup(`<b>${SCHOOL.name}</b><br>Punto de inicio`);
+  L.circle([SCHOOL.lat,SCHOOL.lng],{radius:90,color:"#e93545",weight:2,fillColor:"#e93545",fillOpacity:.1}).addTo(map);
+
+  const landmarkData = [
+    ["Parque Leonardo Tascón",3.99655,-76.22735,"#19a463"],
+    ["Alcaldía Municipal",3.99555,-76.22710,"#0b6ff5"],
+    ["Parroquia San Pedro Apóstol",3.99525,-76.22735,"#7c3aed"],
+    ["Bomberos San Pedro",3.99825,-76.22820,"#dc2626"]
+  ];
+  landmarkData.forEach(([name,lat,lng,color])=>{
+    labels.addLayer(
+      L.circleMarker([lat,lng],{radius:7,color:"#fff",weight:2,fillColor:color,fillOpacity:.96,pane:"topPane"})
+        .bindTooltip(name,{permanent:false,direction:"top",offset:[0,-8]})
+        .bindPopup(`<b>${name}</b>`)
+    );
+  });
+  labels.addTo(map);
+
+  [satellite,streets].forEach(layer=>{
+    layer.on("tileerror",()=>{
+      state.tileErrors++;
+      if(state.tileErrors > 5 && map.getZoom()>17){
+        map.setZoom(17);
+        showToast("Reduje un poco el zoom para completar la carga del mapa.");
+        state.tileErrors=0;
+      }
+    });
+    layer.on("load",()=>hideLoader());
+  });
+
+  function stopIcon(i){
+    return L.divIcon({className:"",html:`<div class="stop-marker">${i}</div>`,iconSize:[28,28],iconAnchor:[14,14]});
+  }
+  const runnerIcon = L.divIcon({className:"",html:'<div class="runner-marker">➤</div>',iconSize:[42,42],iconAnchor:[21,21]});
+
+  function hideLoader(){setTimeout(()=>el.loading.classList.add("hide"),450)}
+  function showToast(msg,persist=false){
+    el.toast.textContent=msg;
+    el.toast.style.display="block";
+    if(!persist) setTimeout(()=>el.toast.style.display="none",4300);
+  }
+  function setStatus(msg){el.status.innerHTML=msg}
+  function repair(){
+    const h = window.innerHeight || document.documentElement.clientHeight;
+    el.map.style.height = h + "px";
+    el.map.style.width = "100vw";
+    map.invalidateSize(true);
+    setTimeout(()=>map.invalidateSize(true),120);
+    setTimeout(()=>map.invalidateSize(true),520);
+  }
+  window.addEventListener("resize",repair,{passive:true});
+  window.addEventListener("orientationchange",()=>setTimeout(repair,520),{passive:true});
+  if(window.ResizeObserver) new ResizeObserver(repair).observe(el.map);
+
+  function setSheet(mode){
+    state.sheetState=mode;
+    el.sheet.classList.remove("mid","full");
+    if(mode==="mid") el.sheet.classList.add("mid");
+    if(mode==="full") el.sheet.classList.add("full");
+    setTimeout(repair,180);
+  }
+  function toggleSheet(){
+    if(state.sheetState==="peek") setSheet("mid");
+    else if(state.sheetState==="mid") setSheet("full");
+    else setSheet("peek");
+  }
+
+  let startY=0, startMode="peek";
+  el.handleZone.addEventListener("click",toggleSheet);
+  el.handleZone.addEventListener("touchstart",ev=>{
+    startY=ev.touches[0].clientY;
+    startMode=state.sheetState;
+  },{passive:true});
+  el.handleZone.addEventListener("touchend",ev=>{
+    const y=ev.changedTouches[0].clientY;
+    const dy=y-startY;
+    if(Math.abs(dy)<24){toggleSheet();return}
+    if(dy<0){
+      if(startMode==="peek")setSheet("mid"); else setSheet("full");
+    }else{
+      if(startMode==="full")setSheet("mid"); else setSheet("peek");
+    }
+  },{passive:true});
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
+  }
+  function shortLabel(label){
+    return String(label||"Destino").split(",").map(x=>x.trim()).filter(Boolean).slice(0,3).join(", ");
+  }
+  function parseCoords(q){
+    const m=q.trim().replace(/[;]/g,",").match(/(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/);
+    if(!m)return null;
+    const lat=Number(m[1]),lng=Number(m[2]);
+    if(!Number.isFinite(lat)||!Number.isFinite(lng))return null;
+    return {lat,lng,label:`Coordenadas ${lat.toFixed(6)}, ${lng.toFixed(6)}`};
+  }
+  function normalize(q){
+    const t=q.trim(); if(!t)return "";
+    const l=t.toLowerCase();
+    return (l.includes("san pedro")||l.includes("valle"))?t:`${t}, San Pedro, Valle del Cauca, Colombia`;
+  }
+  async function geocode(q){
+    const c=parseCoords(q); if(c)return [c];
+    const url=new URL("https://nominatim.openstreetmap.org/search");
+    url.searchParams.set("format","jsonv2");
+    url.searchParams.set("q",normalize(q));
+    url.searchParams.set("limit","7");
+    url.searchParams.set("countrycodes","co");
+    url.searchParams.set("viewbox","-76.2470,4.0115,-76.2070,3.9820");
+    const res=await fetch(url,{headers:{"Accept":"application/json"}});
+    if(!res.ok)throw new Error("search");
+    const data=await res.json();
+    return data.map(x=>({lat:Number(x.lat),lng:Number(x.lon),label:x.display_name})).filter(x=>Number.isFinite(x.lat)&&Number.isFinite(x.lng));
+  }
+  async function reverse(lat,lng){
+    try{
+      const url=new URL("https://nominatim.openstreetmap.org/reverse");
+      url.searchParams.set("format","jsonv2");
+      url.searchParams.set("lat",lat);
+      url.searchParams.set("lon",lng);
+      url.searchParams.set("zoom","18");
+      const res=await fetch(url,{headers:{"Accept":"application/json"}});
+      if(!res.ok)throw new Error();
+      const data=await res.json();
+      return data.display_name || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+    }catch(e){return `${lat.toFixed(6)}, ${lng.toFixed(6)}`}
+  }
+
+  async function search(){
+    const q=el.searchInput.value.trim();
+    if(!q){showToast("Escribe un lugar o coordenadas.");return}
+    if(state.searchBusy)return;
+    state.searchBusy=true;
+    el.searchBtn.textContent="…";
+    setStatus("Buscando...");
+    try{
+      const items=await geocode(q);
+      if(items.length===1){
+        addStop(items[0].lat,items[0].lng,shortLabel(items[0].label));
+        el.results.style.display="none";
+      }else showResults(items);
+      setStatus("Selecciona un resultado o agrega una nueva parada.");
+    }catch(e){
+      showToast("No se pudo buscar. Prueba con coordenadas o un punto cercano.");
+      setStatus("Búsqueda no disponible.");
+    }finally{
+      state.searchBusy=false;
+      el.searchBtn.textContent="⌕";
+    }
+  }
+  function showResults(items){
+    el.results.innerHTML="";
+    if(!items.length){
+      el.results.innerHTML='<div class="result"><strong>Sin resultados</strong><span>Prueba con una dirección más general o coordenadas.</span></div>';
+      el.results.style.display="block";
+      return;
+    }
+    items.forEach((r,i)=>{
+      const div=document.createElement("div");
+      div.className="result";
+      div.innerHTML=`<strong>${i+1}. ${escapeHtml(shortLabel(r.label))}</strong><span>${escapeHtml(r.label)}</span>`;
+      div.onclick=()=>{el.results.style.display="none";addStop(r.lat,r.lng,shortLabel(r.label));};
+      el.results.appendChild(div);
+    });
+    el.results.style.display="block";
+  }
+
+  function addStop(lat,lng,label){
+    stopPlayback(false);
+    const i=state.stops.length+1;
+    const marker=L.marker([lat,lng],{icon:stopIcon(i),draggable:true,pane:"topPane"}).addTo(map);
+    const stop={lat,lng,label:label||`Parada ${i}`,marker};
+    state.stops.push(stop);
+    marker.bindPopup(`<b>Parada ${i}</b><br>${escapeHtml(shortLabel(stop.label))}`);
+    marker.on("dragend",async()=>{
+      const p=marker.getLatLng();
+      stop.lat=p.lat; stop.lng=p.lng; stop.label=await reverse(p.lat,p.lng);
+      renderStops(); calculateRoute(false); saveHash();
+    });
+    map.flyTo([lat,lng],Math.min(MAX_ZOOM,17),{duration:.45});
+    renderStops();
+    calculateRoute(false);
+    saveHash();
+    setSheet("mid");
+  }
+  function renderStops(){
+    el.stops.innerHTML="";
+    if(!state.stops.length){
+      el.stops.innerHTML='<div class="stop"><div class="stop-num">0</div><div><strong>Sin paradas</strong><small>Busca un destino o toca ＋ para agregar puntos desde el mapa.</small></div><span></span></div>';
+    }
+    state.stops.forEach((s,i)=>{
+      s.marker.setIcon(stopIcon(i+1));
+      s.marker.setPopupContent(`<b>Parada ${i+1}</b><br>${escapeHtml(shortLabel(s.label))}`);
+      const div=document.createElement("div");
+      div.className="stop";
+      div.innerHTML=`<div class="stop-num">${i+1}</div><div><strong>${escapeHtml(shortLabel(s.label))}</strong><small>${s.lat.toFixed(6)}, ${s.lng.toFixed(6)}</small></div><button class="mini">×</button>`;
+      div.querySelector("button").onclick=ev=>{ev.stopPropagation();removeStop(i)};
+      div.onclick=()=>{map.flyTo([s.lat,s.lng],17,{duration:.35});s.marker.openPopup();setSheet("peek")};
+      el.stops.appendChild(div);
+    });
+    updateStats();
+  }
+  function removeStop(i){
+    stopPlayback(false);
+    const [s]=state.stops.splice(i,1);
+    if(s&&s.marker)map.removeLayer(s.marker);
+    renderStops(); calculateRoute(false); saveHash();
+  }
+  function clearAll(){
+    stopPlayback(false);
+    state.stops.forEach(s=>s.marker&&map.removeLayer(s.marker));
+    state.stops=[];
+    clearRoute();
+    renderStops();
+    saveHash();
+    setStatus("Ruta limpiada.");
+  }
+  function clearRoute(){
+    if(state.routeLayer)map.removeLayer(state.routeLayer);
+    if(state.doneLayer)map.removeLayer(state.doneLayer);
+    if(state.runner)map.removeLayer(state.runner);
+    state.routeLayer=null; state.doneLayer=null; state.runner=null;
+    state.routeLatLngs=[]; state.routeMetrics=[]; state.routeTotal=0;
+    state.routeDistance=0; state.routeDuration=0; state.progress=0;
+    updateStats();
+  }
+
+  async function calculateRoute(warn=true){
+    stopPlayback(false);
+    if(state.routeLayer)map.removeLayer(state.routeLayer);
+    if(state.doneLayer)map.removeLayer(state.doneLayer);
+    state.routeLayer=null; state.doneLayer=null;
+    state.routeLatLngs=[]; state.routeMetrics=[]; state.routeTotal=0;
+    state.routeDistance=0; state.routeDuration=0; state.progress=0;
+    updateStats();
+    if(!state.stops.length){if(warn)showToast("Agrega al menos una parada.");return}
+    setStatus("Calculando ruta...");
+    const coords=[[SCHOOL.lng,SCHOOL.lat],...state.stops.map(s=>[s.lng,s.lat])].map(c=>`${c[0]},${c[1]}`).join(";");
+    const url=`https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`;
+    try{
+      const res=await fetch(url);
+      if(!res.ok)throw new Error();
+      const data=await res.json();
+      const route=data.routes&&data.routes[0];
+      if(!route)throw new Error();
+      state.routeLatLngs=route.geometry.coordinates.map(([lng,lat])=>L.latLng(lat,lng));
+      state.routeDistance=route.distance;
+      state.routeDuration=route.duration;
+      buildMetrics();
+      state.routeLayer=L.polyline(state.routeLatLngs,{pane:"routePane",color:"#fc4c02",weight:8,opacity:.94,lineCap:"round",lineJoin:"round"}).addTo(map);
+      state.doneLayer=L.polyline([],{pane:"donePane",color:"#ffc400",weight:7,opacity:.98,lineCap:"round",lineJoin:"round"}).addTo(map);
+      map.fitBounds(L.latLngBounds(state.routeLatLngs),{paddingTopLeft:[34,130],paddingBottomRight:[34,150],maxZoom:17});
+      updateStats();
+      setStatus(`Ruta lista: <b>${(route.distance/1000).toFixed(2)} km</b>, <b>${Math.round(route.duration/60)} min</b>.`);
+    }catch(e){
+      showToast("No se pudo calcular con OSRM. Usa Google o Waze como respaldo.");
+      setStatus("Ruta no calculada.");
+    }
+  }
+  function buildMetrics(){
+    state.routeMetrics=[]; state.routeTotal=0;
+    state.routeMetrics.push({accum:0,seg:0});
+    for(let i=1;i<state.routeLatLngs.length;i++){
+      const seg=map.distance(state.routeLatLngs[i-1],state.routeLatLngs[i]);
+      state.routeTotal+=seg;
+      state.routeMetrics.push({accum:state.routeTotal,seg});
+    }
+  }
+  function bearing(a,b){
+    const r=d=>d*Math.PI/180, d=x=>x*180/Math.PI;
+    const y=Math.sin(r(b.lng-a.lng))*Math.cos(r(b.lat));
+    const x=Math.cos(r(a.lat))*Math.sin(r(b.lat))-Math.sin(r(a.lat))*Math.cos(r(b.lat))*Math.cos(r(b.lng-a.lng));
+    return (d(Math.atan2(y,x))+360)%360;
+  }
+  function pointAt(progress){
+    const pts=state.routeLatLngs;
+    if(!pts.length)return null;
+    const target=(state.routeTotal||state.routeDistance||1)*Math.max(0,Math.min(1,progress));
+    let lo=1,hi=state.routeMetrics.length-1,index=hi;
+    while(lo<=hi){
+      const mid=(lo+hi)>>1;
+      if(state.routeMetrics[mid].accum>=target){index=mid;hi=mid-1}else lo=mid+1;
+    }
+    const a=pts[index-1]||pts[0], b=pts[index]||pts[pts.length-1];
+    const prev=(state.routeMetrics[index-1]||{accum:0}).accum;
+    const seg=(state.routeMetrics[index]||{seg:1}).seg||1;
+    const t=Math.max(0,Math.min(1,(target-prev)/seg));
+    return {lat:a.lat+(b.lat-a.lat)*t,lng:a.lng+(b.lng-a.lng)*t,angle:bearing(a,b),index};
+  }
+  async function playRoute(reset=true){
+    if(!state.stops.length){showToast("Agrega una parada primero.");return}
+    if(!state.routeLatLngs.length)await calculateRoute(true);
+    if(!state.routeLatLngs.length)return;
+    if(reset)state.progress=0;
+    state.playing=true;
+    state.lastFrame=performance.now();
+    el.navPill.style.display="flex";
+    setSheet("peek");
+    const p=pointAt(state.progress);
+    if(!state.runner)state.runner=L.marker([p.lat,p.lng],{icon:runnerIcon,pane:"topPane",zIndexOffset:3000}).addTo(map);
+    requestAnimationFrame(animate);
+  }
+  function animate(now){
+    if(!state.playing)return;
+    const dt=Math.min(90,now-state.lastFrame);
+    state.lastFrame=now;
+    state.progress += dt/34000*3.4;
+    if(state.progress>=1){
+      state.progress=1;
+      updateRunner();
+      state.playing=false;
+      setStatus("Recorrido finalizado.");
+      setSheet("mid");
+      return;
+    }
+    updateRunner();
+    requestAnimationFrame(animate);
+  }
+  function updateRunner(){
+    const p=pointAt(state.progress);
+    if(!p)return;
+    if(state.runner)state.runner.setLatLng([p.lat,p.lng]);
+    const elem=state.runner&&state.runner.getElement();
+    if(elem){
+      const inner=elem.querySelector(".runner-marker");
+      if(inner)inner.style.transform=`rotate(${p.angle}deg)`;
+    }
+    const now=performance.now();
+    if(state.doneLayer && (!state._lastDone || now-state._lastDone>100)){
+      const upto=Math.max(2,Math.floor(state.routeLatLngs.length*state.progress));
+      state.doneLayer.setLatLngs(state.routeLatLngs.slice(0,upto));
+      state._lastDone=now;
+    }
+    if(!state.lastCamera || now-state.lastCamera>210){
+      map.panTo([p.lat,p.lng],{animate:true,duration:.28});
+      state.lastCamera=now;
+    }
+    updateStats();
+  }
+  function stopPlayback(open=true){
+    state.playing=false;
+    if(open)setSheet("mid");
+  }
+  function updateStats(){
+    const km=(state.routeDistance/1000).toFixed(2);
+    const pct=Math.round(state.progress*100);
+    el.km.textContent=km;
+    el.min.textContent=String(Math.round(state.routeDuration/60));
+    el.stopsCount.textContent=String(state.stops.length);
+    el.progressBar.style.width=`${pct}%`;
+    el.navKm.textContent=`${(state.routeDistance/1000*state.progress).toFixed(2)} km`;
+    el.navPct.textContent=`${pct}%`;
+    el.summarySub.textContent=state.stops.length ? `${state.stops.length} parada(s) · ${km} km` : "Desde Colegio José Antonio Aguilera";
+  }
+
+  function useReal(){
+    if(map.hasLayer(streets))map.removeLayer(streets);
+    if(!map.hasLayer(satellite))satellite.addTo(map);
+    if(state.labelsOn && !map.hasLayer(labels))labels.addTo(map);
+    state.activeLayer="real";
+    el.realChip.classList.add("active");
+    el.streetChip.classList.remove("active");
+    repair();
+    setStatus("Mapa realista activo. La interfaz deja el mapa casi completo y el menú queda desplegable.");
+  }
+  function useStreet(){
+    if(map.hasLayer(satellite))map.removeLayer(satellite);
+    if(!map.hasLayer(streets))streets.addTo(map);
+    if(state.labelsOn && !map.hasLayer(labels))labels.addTo(map);
+    state.activeLayer="street";
+    el.streetChip.classList.add("active");
+    el.realChip.classList.remove("active");
+    repair();
+    setStatus("Vista de calles activa. Útil para ubicar nombres y carreras.");
+  }
+  function toggleLabels(){
+    state.labelsOn=!state.labelsOn;
+    if(state.labelsOn)labels.addTo(map);
+    else if(map.hasLayer(labels))map.removeLayer(labels);
+    el.trafficChip.classList.toggle("active",state.labelsOn);
+  }
+  function fitSanPedro(){
+    map.fitBounds(SAN_PEDRO_BOUNDS,{paddingTopLeft:[24,120],paddingBottomRight:[24,140],maxZoom:17});
+    repair();
+  }
+  function locate(){
+    if(!navigator.geolocation){showToast("Geolocalización no disponible.");return}
+    navigator.geolocation.getCurrentPosition(pos=>{
+      const lat=pos.coords.latitude,lng=pos.coords.longitude;
+      L.circleMarker([lat,lng],{radius:8,color:"#fff",weight:3,fillColor:"#19a463",fillOpacity:1,pane:"topPane"}).addTo(map).bindPopup("<b>Mi ubicación</b>").openPopup();
+      map.flyTo([lat,lng],17,{duration:.45});
+    },()=>showToast("No se pudo obtener tu ubicación."),{enableHighAccuracy:true,timeout:8000,maximumAge:30000});
+  }
+  function routeUrl(provider){
+    const origin=`${SCHOOL.lat},${SCHOOL.lng}`;
+    const dest=state.stops.length?`${state.stops[state.stops.length-1].lat},${state.stops[state.stops.length-1].lng}`:origin;
+    const way=state.stops.slice(0,-1).map(s=>`${s.lat},${s.lng}`);
+    if(provider==="google"){
+      let u=`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}&travelmode=driving`;
+      if(way.length)u+=`&waypoints=${encodeURIComponent(way.join("|"))}`;
+      return u;
+    }
+    const last=state.stops.length?state.stops[state.stops.length-1]:SCHOOL;
+    return `https://waze.com/ul?ll=${last.lat},${last.lng}&navigate=yes&zoom=16`;
+  }
+  function openProvider(p){window.open(routeUrl(p),"_blank","noopener,noreferrer")}
+  function saveLocal(){
+    const data=state.stops.map(s=>({lat:s.lat,lng:s.lng,label:s.label}));
+    localStorage.setItem("sprs_mapsui",JSON.stringify(data));
+    showToast("Ruta guardada en este celular.");
+  }
+  function loadLocal(){
+    const raw=localStorage.getItem("sprs_mapsui");
+    if(!raw){showToast("No hay ruta guardada.");return}
+    clearAll();
+    try{JSON.parse(raw).forEach(s=>addStop(s.lat,s.lng,s.label));showToast("Ruta cargada.");}
+    catch(e){showToast("No se pudo cargar la ruta.")}
+  }
+  function saveHash(){
+    const compact=state.stops.map(s=>`${s.lat.toFixed(6)},${s.lng.toFixed(6)}`).join(";");
+    if(compact)history.replaceState(null,"",`${location.pathname}#stops=${encodeURIComponent(compact)}`);
+    else history.replaceState(null,"",location.pathname);
+  }
+  function loadHash(){
+    const m=(location.hash||"").match(/stops=([^&]+)/);
+    if(!m)return;
+    decodeURIComponent(m[1]).split(";").filter(Boolean).forEach((x,i)=>{
+      const c=parseCoords(x);
+      if(c)addStop(c.lat,c.lng,`Parada compartida ${i+1}`);
+    });
+  }
+  async function share(){
+    saveHash();
+    try{await navigator.clipboard.writeText(location.href);showToast("Enlace copiado.");}
+    catch(e){showToast(location.href,true)}
+  }
+  function featureCollection(){
+    const features=[{type:"Feature",properties:{name:SCHOOL.name,role:"start"},geometry:{type:"Point",coordinates:[SCHOOL.lng,SCHOOL.lat]}}];
+    state.stops.forEach((s,i)=>features.push({type:"Feature",properties:{name:s.label,order:i+1,role:"stop"},geometry:{type:"Point",coordinates:[s.lng,s.lat]}}));
+    if(state.routeLatLngs.length)features.push({type:"Feature",properties:{name:"Ruta San Pedro",distance_m:state.routeDistance},geometry:{type:"LineString",coordinates:state.routeLatLngs.map(p=>[p.lng,p.lat])}});
+    return {type:"FeatureCollection",features};
+  }
+  function download(name,content,type="text/plain"){
+    const blob=new Blob([content],{type});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a"); a.href=url; a.download=name; document.body.appendChild(a); a.click();
+    setTimeout(()=>{URL.revokeObjectURL(url);a.remove()},1000);
+  }
+  function exportGeo(){download("ruta_san_pedro.geojson",JSON.stringify(featureCollection(),null,2),"application/geo+json")}
+  function exportGpx(){
+    const pts=state.routeLatLngs.length?state.routeLatLngs:[L.latLng(SCHOOL.lat,SCHOOL.lng),...state.stops.map(s=>L.latLng(s.lat,s.lng))];
+    const trk=pts.map(p=>`<trkpt lat="${p.lat.toFixed(7)}" lon="${p.lng.toFixed(7)}"></trkpt>`).join("");
+    download("ruta_san_pedro.gpx",`<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="San Pedro Route Studio"><trk><name>Ruta San Pedro</name><trkseg>${trk}</trkseg></trk></gpx>`,"application/gpx+xml");
+  }
+  function exportKml(){
+    const pts=state.routeLatLngs.length?state.routeLatLngs:[L.latLng(SCHOOL.lat,SCHOOL.lng),...state.stops.map(s=>L.latLng(s.lat,s.lng))];
+    const coords=pts.map(p=>`${p.lng.toFixed(7)},${p.lat.toFixed(7)},0`).join(" ");
+    download("ruta_san_pedro.kml",`<?xml version="1.0" encoding="UTF-8"?><kml xmlns="http://www.opengis.net/kml/2.2"><Document><Placemark><name>Ruta San Pedro</name><LineString><coordinates>${coords}</coordinates></LineString></Placemark></Document></kml>`,"application/vnd.google-earth.kml+xml");
+  }
+  function cleanScreen(){
+    document.body.classList.add("clean");
+    setSheet("peek");
+    repair();
+    showToast("Pantalla limpia activa. Usa la grabadora nativa del celular. Doble toque en el mapa para salir.");
+  }
+  function exitClean(){document.body.classList.remove("clean");repair()}
+
+  map.on("click",async e=>{
+    if(document.body.classList.contains("clean"))return;
+    const {lat,lng}=e.latlng;
+    const addr=await reverse(lat,lng);
+    L.popup().setLatLng([lat,lng]).setContent(`<b>Punto identificado</b><br>${escapeHtml(shortLabel(addr))}<br><small>${lat.toFixed(6)}, ${lng.toFixed(6)}</small>`).openOn(map);
+    if(state.clickMode)addStop(lat,lng,shortLabel(addr));
+  });
+  map.on("dblclick",exitClean);
+  map.on("zoomend",()=>{
+    if(map.getZoom()>MAX_ZOOM){map.setZoom(MAX_ZOOM);showToast("Zoom máximo bloqueado para evitar mapa incompleto.")}
+  });
+
+  el.searchBtn.onclick=search;
+  el.searchInput.onkeydown=e=>{if(e.key==="Enter")search(); if(e.key==="Escape")el.results.style.display="none"};
+  el.realChip.onclick=useReal;
+  el.streetChip.onclick=useStreet;
+  el.trafficChip.onclick=toggleLabels;
+  el.routeChip.onclick=()=>{calculateRoute(true);setSheet("mid")};
+  el.locateBtn.onclick=locate;
+  el.fitBtn.onclick=fitSanPedro;
+  el.clickBtn.onclick=()=>{
+    state.clickMode=!state.clickMode;
+    el.clickBtn.classList.toggle("active",state.clickMode);
+    showToast(state.clickMode ? "Modo agregar punto activo: toca el mapa para crear paradas." : "Modo agregar punto desactivado.");
+  };
+  el.playBtn.onclick=()=>playRoute(true);
+  el.routeBtn.onclick=()=>calculateRoute(true);
+  el.googleBtn.onclick=()=>openProvider("google");
+  el.wazeBtn.onclick=()=>openProvider("waze");
+  el.shareBtn.onclick=share;
+  el.saveBtn.onclick=saveLocal;
+  el.loadBtn.onclick=loadLocal;
+  el.cleanBtn.onclick=cleanScreen;
+  el.clearBtn.onclick=clearAll;
+  el.geoBtn.onclick=exportGeo;
+  el.gpxBtn.onclick=exportGpx;
+  el.kmlBtn.onclick=exportKml;
+  el.pauseBtn.onclick=()=>{stopPlayback(true);setStatus("Recorrido pausado.")};
+
+  if("serviceWorker" in navigator && location.protocol.startsWith("http")){
+    navigator.serviceWorker.register("sw.js").catch(()=>{});
+  }
+
+  repair();
+  setTimeout(repair,500);
+  setTimeout(repair,1200);
+  map.whenReady(()=>{
+    fitSanPedro();
+    setTimeout(()=>map.flyTo([SCHOOL.lat,SCHOOL.lng],START_ZOOM,{duration:.6}),700);
+    hideLoader();
+    renderStops();
+    loadHash();
+    setSheet("peek");
+    setTimeout(()=>schoolMarker.openPopup(),1100);
+  });
+})();
+</script>
+
+<script>
+  function setDualPreference(view){
+    try{localStorage.setItem("sprs_dual_view", view);}catch(e){}
+  }
+</script>
+
+<a class="dual-switch-btn" href="desktop.html" onclick="setDualPreference('desktop')">Versión PC</a>
+</body>
+</html>

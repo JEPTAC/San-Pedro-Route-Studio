@@ -1,7 +1,9 @@
-const CACHE_NAME = "san-pedro-route-maps-ui-v1";
+const CACHE_NAME = "san-pedro-route-dual-v1";
 const APP = [
   "./",
   "./index.html",
+  "./desktop.html",
+  "./mobile.html",
   "./manifest.webmanifest",
   "./assets/logo-alcaldia.png",
   "./assets/logo-san-pedro.png",
@@ -14,13 +16,16 @@ self.addEventListener("install", event => {
 });
 
 self.addEventListener("activate", event => {
-  event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))));
+  event.waitUntil(
+    caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))))
+  );
   self.clients.claim();
 });
 
 self.addEventListener("fetch", event => {
   const req = event.request;
   if (req.method !== "GET") return;
+
   const url = new URL(req.url);
 
   if (url.origin !== location.origin) {

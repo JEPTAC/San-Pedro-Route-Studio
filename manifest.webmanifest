@@ -1,7 +1,7 @@
 {
-  "name": "San Pedro Route Studio Maps UI",
+  "name": "San Pedro Route Studio Dual",
   "short_name": "San Pedro Route",
-  "description": "Interfaz móvil tipo app de mapas para iOS y Android.",
+  "description": "Aplicación dual con versión PC y versión móvil estilo mapas para iOS y Android.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
