@@ -1,12 +1,10 @@
-# San Pedro Route Studio - Grabación limpia
+# San Pedro Route Studio - Solo mapa
 
-Versión para GitHub Pages con modo de grabación limpio.
+Versión para GitHub Pages con modo de grabación solo mapa.
 
-## Novedad principal
-Cuando se usa el botón **Grabar WebM**, la interfaz se oculta y en el video solo quedan visibles:
-- el mapa
-- la ruta y el cursor/runner
-- el contador de kilómetros recorridos
+## Botones nuevos
+- **Grabar solo mapa**: oculta toda la interfaz, logos, controles y contador. En el video queda únicamente el mapa con la ruta y el cursor.
+- **Pantalla limpia**: reproduce el recorrido en modo limpio para grabar con una herramienta externa.
 
-## Publicación
-Sube `index.html` a la raíz del repositorio y activa GitHub Pages.
+## Importante
+Cuando el navegador pregunte qué deseas compartir, selecciona **Pestaña / Esta pestaña**, no Pantalla completa ni Ventana. De esa forma no se graba la barra del navegador.
