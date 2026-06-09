@@ -1290,6 +1290,68 @@
       }
     }
 
+
+    .point-card{
+      position:absolute;
+      z-index:1180;
+      left:18px;
+      top:96px;
+      width:min(360px, calc(100vw - 36px));
+      display:none;
+      padding:12px;
+      border-radius:22px;
+      background:rgba(255,255,255,.96);
+      border:1px solid rgba(219,232,247,.96);
+      box-shadow:0 18px 46px rgba(4,23,51,.22);
+      backdrop-filter:blur(14px);
+      color:#142544;
+      font-family:"Century Gothic","Segoe UI",Arial,sans-serif;
+    }
+
+    .point-card.show{display:block;animation:pointIn .18s ease-out}
+    @keyframes pointIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+
+    .point-card small{
+      display:block;
+      color:#64738a;
+      font-size:11px;
+      line-height:1.35;
+      margin-top:3px;
+      word-break:break-word;
+    }
+
+    .point-card strong{
+      display:block;
+      color:#071f43;
+      font-size:13px;
+      margin-bottom:4px;
+    }
+
+    .point-card-actions{
+      display:grid;
+      grid-template-columns:1fr 1fr auto;
+      gap:7px;
+      margin-top:10px;
+    }
+
+    .point-card-actions button{
+      height:34px;
+      min-height:34px;
+      border-radius:12px;
+      padding:0 9px;
+      font-size:11px;
+    }
+
+    @media (max-width:980px){
+      .point-card{
+        left:10px;
+        right:10px;
+        top:auto;
+        bottom:calc(82px + env(safe-area-inset-bottom,0px));
+        width:auto;
+      }
+    }
+
     @media print {
       .brand-shell,.searchbar,.panel,.map-badge,.search-results,.toast,.loading,.capture-overlay { display:none !important; }
       #map { inset:0 !important; }
@@ -1329,6 +1391,8 @@
   }
 </style>
 
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <link rel="icon" href="assets/app-icon-192.png">
 </head>
 
 <body>
@@ -1499,6 +1563,18 @@
     </div>
   </div>
 
+
+  <div class="point-card" id="pointCard">
+    <strong id="pointCardTitle">Punto identificado</strong>
+    <small id="pointCardAddress">Dirección</small>
+    <small id="pointCardCoords">Coordenadas</small>
+    <div class="point-card-actions">
+      <button class="primary" id="pointCardAdd">Agregar parada</button>
+      <button id="pointCardCopy">Copiar</button>
+      <button class="danger" id="pointCardClose">×</button>
+    </div>
+  </div>
+
   <div class="toast" id="toast"></div>
 </div>
 
@@ -1591,6 +1667,13 @@
     kmlBtn: document.getElementById("kmlBtn"),
     stopsList: document.getElementById("stopsList"),
     toast: document.getElementById("toast"),
+    pointCard: document.getElementById("pointCard"),
+    pointCardTitle: document.getElementById("pointCardTitle"),
+    pointCardAddress: document.getElementById("pointCardAddress"),
+    pointCardCoords: document.getElementById("pointCardCoords"),
+    pointCardAdd: document.getElementById("pointCardAdd"),
+    pointCardCopy: document.getElementById("pointCardCopy"),
+    pointCardClose: document.getElementById("pointCardClose"),
     mobilePanelBtn: document.getElementById("mobilePanelBtn"),
     mobileQuickbar: document.getElementById("mobileQuickbar"),
     mRouteBtn: document.getElementById("mRouteBtn"),
@@ -2146,36 +2229,45 @@
     }
   }
 
+  function showPointCard(lat, lng, address) {
+    const label = shortLabel(address);
+    const coords = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+
+    if(!el.pointCard) return;
+
+    el.pointCardTitle.textContent = "Punto identificado";
+    el.pointCardAddress.textContent = label;
+    el.pointCardCoords.textContent = coords;
+
+    el.pointCardAdd.onclick = () => {
+      addStop(lat, lng, label);
+      el.pointCard.classList.remove("show");
+    };
+
+    el.pointCardCopy.onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(coords);
+        status(`Coordenadas copiadas: <b>${coords}</b>`);
+      } catch(e) {
+        toast(`Coordenadas: ${coords}`);
+      }
+    };
+
+    el.pointCardClose.onclick = () => {
+      el.pointCard.classList.remove("show");
+    };
+
+    el.pointCard.classList.add("show");
+  }
+
   async function handleMapClick(e) {
     const {lat,lng} = e.latlng;
     const address = await reverseGeocode(lat,lng);
-    const popupHtml = `
-      <b>Punto identificado</b><br>
-      ${escapeHtml(shortLabel(address))}<br>
-      <small>${lat.toFixed(6)}, ${lng.toFixed(6)}</small>
-      <div class="popup-actions">
-        <button onclick="window.__addStopFromPopup(${lat},${lng}, '${encodeURIComponent(shortLabel(address))}')">Agregar parada</button>
-        <button onclick="window.__copyCoords('${lat.toFixed(6)}, ${lng.toFixed(6)}')">Copiar</button>
-      </div>
-    `;
-    L.popup().setLatLng([lat,lng]).setContent(popupHtml).openOn(map);
+
+    showPointCard(lat, lng, address);
 
     if(state.clickMode) addStop(lat,lng,shortLabel(address));
   }
-
-  window.__addStopFromPopup = function(lat,lng,encodedLabel) {
-    addStop(Number(lat), Number(lng), decodeURIComponent(encodedLabel));
-    map.closePopup();
-  };
-
-  window.__copyCoords = async function(text) {
-    try {
-      await navigator.clipboard.writeText(text);
-      status(`Coordenadas copiadas: <b>${text}</b>`);
-    } catch(e) {
-      toast(`Coordenadas: ${text}`);
-    }
-  };
 
   function routeUrl(provider) {
     const origin = `${SCHOOL.lat},${SCHOOL.lng}`;

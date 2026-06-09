@@ -37,3 +37,17 @@ Mejoras móviles:
 - Panel inferior más bajo y menos invasivo.
 - Panel con comportamiento tipo iOS/Apple Maps: minimizado, medio y completo.
 - Logos institucionales movidos al panel, no sobrecargan el mapa.
+
+
+## Ajuste de ícono y notificaciones
+
+Se agregó un ícono oficial de instalación para iOS/Android:
+- `assets/app-icon-192.png`
+- `assets/app-icon-512.png`
+- `assets/app-icon-1024.png`
+- `assets/apple-touch-icon.png`
+
+También se reemplazó la burbuja invasiva de “Punto identificado” por una tarjeta flotante no invasiva:
+- En PC aparece como tarjeta lateral.
+- En móvil aparece como tarjeta inferior compacta.
+- Permite agregar parada, copiar coordenadas o cerrar sin tapar el punto del mapa.

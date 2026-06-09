@@ -11,8 +11,8 @@
   <title>San Pedro Route Studio · iOS/Android</title>
 
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="apple-touch-icon" href="assets/logo-san-pedro.png">
-  <link rel="icon" href="assets/logo-san-pedro.png">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <link rel="icon" href="assets/app-icon-192.png">
   <link rel="preconnect" href="https://unpkg.com" crossorigin>
   <link rel="preconnect" href="https://server.arcgisonline.com" crossorigin>
   <link rel="preconnect" href="https://tile.openstreetmap.org" crossorigin>
@@ -570,6 +570,71 @@
       font-weight:900;
     }
 
+
+    .point-card{
+      position:absolute;
+      z-index:1350;
+      left:14px;
+      right:74px;
+      bottom:calc(var(--collapsed) + 18px + var(--safe-bottom));
+      display:none;
+      padding:11px;
+      border-radius:20px;
+      background:rgba(255,255,255,.96);
+      border:1px solid var(--line);
+      box-shadow:0 14px 34px rgba(5,26,55,.22);
+      backdrop-filter:blur(16px);
+      color:#142544;
+    }
+
+    .point-card.show{display:block;animation:pointIn .18s ease-out}
+    @keyframes pointIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+    .point-card strong{
+      display:block;
+      color:#0b2651;
+      font-size:13px;
+      margin-bottom:3px;
+    }
+
+    .point-card small{
+      display:block;
+      color:#65738a;
+      font-size:11px;
+      line-height:1.35;
+      word-break:break-word;
+      margin-top:2px;
+    }
+
+    .point-card-actions{
+      display:grid;
+      grid-template-columns:1fr 1fr 34px;
+      gap:7px;
+      margin-top:9px;
+    }
+
+    .point-card-actions button{
+      height:34px;
+      border-radius:13px;
+      font-size:11px;
+      background:#edf5ff;
+      border:1px solid #d6e5f7;
+      color:#0b2651;
+    }
+
+    .point-card-actions button.primary{
+      background:linear-gradient(135deg,#ffe071,#ffc400);
+      border-color:#ffc400;
+    }
+
+    .point-card-actions button.danger{
+      background:#fff1ef;
+      color:#9b1c12;
+      border-color:#ffc9c4;
+    }
+
+    body.clean .point-card{display:none!important}
+
     .toast{
       position:absolute;
       z-index:1600;
@@ -703,7 +768,72 @@
       .sheet-inner{
         border-radius:28px;
       }
-      .toast{
+  
+    .point-card{
+      position:absolute;
+      z-index:1350;
+      left:14px;
+      right:74px;
+      bottom:calc(var(--collapsed) + 18px + var(--safe-bottom));
+      display:none;
+      padding:11px;
+      border-radius:20px;
+      background:rgba(255,255,255,.96);
+      border:1px solid var(--line);
+      box-shadow:0 14px 34px rgba(5,26,55,.22);
+      backdrop-filter:blur(16px);
+      color:#142544;
+    }
+
+    .point-card.show{display:block;animation:pointIn .18s ease-out}
+    @keyframes pointIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+    .point-card strong{
+      display:block;
+      color:#0b2651;
+      font-size:13px;
+      margin-bottom:3px;
+    }
+
+    .point-card small{
+      display:block;
+      color:#65738a;
+      font-size:11px;
+      line-height:1.35;
+      word-break:break-word;
+      margin-top:2px;
+    }
+
+    .point-card-actions{
+      display:grid;
+      grid-template-columns:1fr 1fr 34px;
+      gap:7px;
+      margin-top:9px;
+    }
+
+    .point-card-actions button{
+      height:34px;
+      border-radius:13px;
+      font-size:11px;
+      background:#edf5ff;
+      border:1px solid #d6e5f7;
+      color:#0b2651;
+    }
+
+    .point-card-actions button.primary{
+      background:linear-gradient(135deg,#ffe071,#ffc400);
+      border-color:#ffc400;
+    }
+
+    .point-card-actions button.danger{
+      background:#fff1ef;
+      color:#9b1c12;
+      border-color:#ffc9c4;
+    }
+
+    body.clean .point-card{display:none!important}
+
+    .toast{
         left:14px;
         right:auto;
         width:410px;
@@ -815,6 +945,18 @@
     </div>
   </section>
 
+
+  <div class="point-card" id="pointCard">
+    <strong id="pointCardTitle">Punto identificado</strong>
+    <small id="pointCardAddress">Dirección</small>
+    <small id="pointCardCoords">Coordenadas</small>
+    <div class="point-card-actions">
+      <button class="primary" id="pointCardAdd">Agregar</button>
+      <button id="pointCardCopy">Copiar</button>
+      <button class="danger" id="pointCardClose">×</button>
+    </div>
+  </div>
+
   <div class="toast" id="toast"></div>
 </div>
 
@@ -890,7 +1032,14 @@
     kmlBtn:gid("kmlBtn"),
     pauseBtn:gid("pauseBtn"),
     stops:gid("stops"),
-    toast:gid("toast")
+    toast:gid("toast"),
+    pointCard:gid("pointCard"),
+    pointCardTitle:gid("pointCardTitle"),
+    pointCardAddress:gid("pointCardAddress"),
+    pointCardCoords:gid("pointCardCoords"),
+    pointCardAdd:gid("pointCardAdd"),
+    pointCardCopy:gid("pointCardCopy"),
+    pointCardClose:gid("pointCardClose")
   };
 
   function gid(id){return document.getElementById(id)}
@@ -1572,13 +1721,45 @@
     repair();
   }
 
+
+  function showPointCard(lat, lng, address){
+    if(!el.pointCard) return;
+
+    const label = shortLabel(address);
+    const coords = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+
+    el.pointCardTitle.textContent = "Punto identificado";
+    el.pointCardAddress.textContent = label;
+    el.pointCardCoords.textContent = coords;
+
+    el.pointCardAdd.onclick = () => {
+      addStop(lat, lng, label);
+      el.pointCard.classList.remove("show");
+    };
+
+    el.pointCardCopy.onclick = async () => {
+      try{
+        await navigator.clipboard.writeText(coords);
+        showToast("Coordenadas copiadas.");
+      }catch(e){
+        showToast(coords, true);
+      }
+    };
+
+    el.pointCardClose.onclick = () => {
+      el.pointCard.classList.remove("show");
+    };
+
+    el.pointCard.classList.add("show");
+  }
+
   map.on("click",async e=>{
     if(document.body.classList.contains("clean"))return;
 
     const {lat,lng}=e.latlng;
     const addr=await reverse(lat,lng);
 
-    L.popup().setLatLng([lat,lng]).setContent(`<b>Punto identificado</b><br>${escapeHtml(shortLabel(addr))}<br><small>${lat.toFixed(6)}, ${lng.toFixed(6)}</small>`).openOn(map);
+    showPointCard(lat, lng, addr);
 
     if(state.clickMode)addStop(lat,lng,shortLabel(addr));
   });

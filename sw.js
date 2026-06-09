@@ -7,7 +7,11 @@ const APP = [
   "./manifest.webmanifest",
   "./assets/logo-alcaldia.png",
   "./assets/logo-san-pedro.png",
-  "./assets/logo-jept.png"
+  "./assets/logo-jept.png",
+  "./assets/apple-touch-icon.png",
+  "./assets/app-icon-1024.png",
+  "./assets/app-icon-512.png",
+  "./assets/app-icon-192.png"
 ];
 
 self.addEventListener("install", event => {
