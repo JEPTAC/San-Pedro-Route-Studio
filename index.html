@@ -905,6 +905,63 @@
     }
 
 
+
+    .record-permission {
+      display:none;
+      position:absolute;
+      z-index:1600;
+      inset:0;
+      align-items:center;
+      justify-content:center;
+      padding:22px;
+      background:rgba(7,31,67,.78);
+      backdrop-filter:blur(12px);
+    }
+
+    .record-permission-card {
+      width:min(520px, calc(100vw - 36px));
+      border-radius:28px;
+      background:#fff;
+      border:1px solid rgba(219,232,247,.96);
+      box-shadow:0 24px 70px rgba(4,23,51,.34);
+      padding:22px;
+      text-align:center;
+    }
+
+    .record-permission-card h2 {
+      margin:0 0 8px;
+      color:#071f43;
+      font-size:20px;
+      letter-spacing:-.03em;
+    }
+
+    .record-permission-card p {
+      margin:0;
+      color:#60718d;
+      font-size:13px;
+      line-height:1.45;
+    }
+
+    .record-permission-card b {
+      color:#fc4c02;
+    }
+
+    .record-permission-card .steps {
+      text-align:left;
+      margin:14px 0 0;
+      padding:12px;
+      border-radius:18px;
+      background:#f8fbff;
+      border:1px solid #dfe9f6;
+      color:#263a59;
+      font-size:13px;
+      line-height:1.45;
+    }
+
+    body.only-map-recording .record-permission {
+      display:none !important;
+    }
+
     /* ===== UNIVERSAL RESPONSIVE PWA PATCH ===== */
     :root {
       --safe-top: env(safe-area-inset-top, 0px);
@@ -1333,7 +1390,7 @@
         <button id="resetVideoBtn">Reiniciar cámara</button>
         <button class="primary" id="recordBtn">Grabar WebM</button>
         <button class="dark" id="recordMapOnlyBtn">Grabar solo mapa</button>
-        <button id="fullscreenCleanBtn">Pantalla limpia</button>
+        <button id="fullscreenCleanBtn">Pantalla limpia + grabar</button>
       </div>
       <div class="slider-box">
         <span>Velocidad</span>
@@ -1393,6 +1450,19 @@
     <b>Instalar como app</b><br>
     En Android usa “Instalar app”. En iPhone abre Safari, toca Compartir y luego “Agregar a pantalla de inicio”.
     <br><button id="installCloseBtn">Entendido</button>
+  </div>
+
+
+  <div class="record-permission" id="recordPermission">
+    <div class="record-permission-card">
+      <h2>Preparando grabación limpia</h2>
+      <p>Cuando el navegador pregunte qué deseas compartir, selecciona <b>Esta pestaña</b>. No elijas pantalla completa ni ventana.</p>
+      <div class="steps">
+        1. Selecciona <b>Esta pestaña</b>.<br>
+        2. Pulsa <b>Compartir</b>.<br>
+        3. La app ocultará todo, navegará la ruta y descargará el video automáticamente.
+      </div>
+    </div>
   </div>
 
   <div class="toast" id="toast"></div>
@@ -1496,6 +1566,7 @@
     mGoogleBtn: document.getElementById("mGoogleBtn"),
     installHint: document.getElementById("installHint"),
     installCloseBtn: document.getElementById("installCloseBtn"),
+    recordPermission: document.getElementById("recordPermission"),
     statKm: document.getElementById("statKm"),
     statMin: document.getElementById("statMin"),
     statStops: document.getElementById("statStops"),
@@ -2555,21 +2626,97 @@
 
 
   async function openCleanFullscreenMode() {
+    // Ahora Pantalla limpia también inicia la grabación automática tipo solo mapa.
+    await autoRecordCleanMap();
+  }
+
+  async function autoRecordCleanMap() {
     const ok = await ensureRoute();
     if(!ok) return;
 
-    setStudioUI(true, false, true);
-
-    try {
-      if(!document.fullscreenElement) {
-        await document.documentElement.requestFullscreen?.();
-      }
-    } catch(e) {
-      // Si el navegador bloquea pantalla completa, dejamos igualmente el modo limpio.
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia || !window.MediaRecorder) {
+      setStudioUI(true, false, true);
+      try {
+        if(!document.fullscreenElement) await document.documentElement.requestFullscreen?.();
+      } catch(e) {}
+      toast("Este navegador no permite grabación automática interna. Se activó pantalla limpia; usa la grabadora nativa del celular o del sistema.", true);
+      await playRoute(true);
+      return;
     }
 
-    toast("Modo pantalla limpia activado. Para salir, presiona ESC y luego pausa/reinicia.");
-    await playRoute(true);
+    try {
+      if(el.recordPermission) el.recordPermission.style.display = "flex";
+
+      // Primero se solicita permiso. El navegador SIEMPRE mostrará su selector por seguridad.
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: {
+          frameRate: state.smoothMode ? 30 : 60,
+          width: {ideal: 1920},
+          height: {ideal: 1080}
+        },
+        audio: false
+      });
+
+      if(el.recordPermission) el.recordPermission.style.display = "none";
+
+      state.recordedChunks = [];
+      state.captureStream = stream;
+
+      const mime = MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
+        ? "video/webm;codecs=vp9"
+        : "video/webm";
+
+      state.mediaRecorder = new MediaRecorder(stream, {
+        mimeType:mime,
+        videoBitsPerSecond: state.smoothMode ? 6500000 : 10000000
+      });
+
+      state.mediaRecorder.ondataavailable = ev => {
+        if(ev.data && ev.data.size > 0) state.recordedChunks.push(ev.data);
+      };
+
+      state.mediaRecorder.onstop = () => {
+        const blob = new Blob(state.recordedChunks, {type:"video/webm"});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        const stamp = new Date().toISOString().replace(/[:.]/g,"-");
+        a.href = url;
+        a.download = `recorrido_solo_mapa_san_pedro_${stamp}.webm`;
+        document.body.appendChild(a);
+        a.click();
+
+        setTimeout(() => {
+          URL.revokeObjectURL(url);
+          a.remove();
+        }, 1000);
+
+        if(state.captureStream) {
+          state.captureStream.getTracks().forEach(t => t.stop());
+          state.captureStream = null;
+        }
+
+        setStudioUI(false, false, false);
+        if(el.recordPermission) el.recordPermission.style.display = "none";
+        status("Video limpio generado automáticamente. En el archivo debe verse solo el mapa, la ruta y el cursor.");
+      };
+
+      // Ocultamos absolutamente toda la interfaz antes de arrancar la grabación.
+      setStudioUI(true, false, true);
+      try {
+        if(!document.fullscreenElement) await document.documentElement.requestFullscreen?.();
+      } catch(e) {}
+
+      repairMap();
+      await new Promise(resolve => setTimeout(resolve, 650));
+
+      state.mediaRecorder.start(500);
+      await playRoute(true);
+
+    } catch(e) {
+      if(el.recordPermission) el.recordPermission.style.display = "none";
+      setStudioUI(false, false, false);
+      toast("No se inició la grabación. Recuerda seleccionar “Esta pestaña” cuando el navegador lo solicite.", true);
+    }
   }
 
 

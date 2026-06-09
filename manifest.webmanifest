@@ -1,7 +1,7 @@
 {
   "name": "San Pedro Route Studio Universal",
   "short_name": "San Pedro Route",
-  "description": "App universal para computador, iOS y Android: mapa realista, rutas, navegación estilo Strava y exportación.",
+  "description": "App universal con mapa realista, rutas, navegación estilo Strava y grabación automática limpia en navegadores compatibles.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

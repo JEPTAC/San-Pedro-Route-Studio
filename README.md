@@ -14,7 +14,7 @@ Versión universal para computador, iOS y Android.
 - Navegación animada estilo Strava.
 - Modo rendimiento.
 - Grabación WebM en navegadores compatibles de computador.
-- Modo pantalla limpia / solo mapa.
+- Modo pantalla limpia con grabación automática solo mapa en navegadores compatibles.
 - Exportación GeoJSON, GPX y KML.
 - Abrir ruta en Google Maps y Waze.
 - PWA instalable en Android y iPhone.
@@ -38,3 +38,15 @@ Chrome > menú de tres puntos > Instalar app / Agregar a pantalla principal.
 ## Instalar en iPhone
 
 Safari > Compartir > Agregar a pantalla de inicio.
+
+
+## Grabación automática limpia
+
+El botón **Pantalla limpia + grabar** automatiza el flujo:
+1. Solicita permiso de captura.
+2. El usuario selecciona **Esta pestaña**.
+3. La app oculta interfaz, logos, controles y paneles.
+4. Reproduce la ruta.
+5. Descarga el video WebM automáticamente.
+
+Por seguridad del navegador no es posible saltarse el permiso de captura ni seleccionar la pestaña automáticamente.
