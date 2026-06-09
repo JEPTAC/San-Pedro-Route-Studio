@@ -1,7 +1,7 @@
 {
-  "name": "San Pedro Route Studio Mobile Turbo",
+  "name": "San Pedro Route Studio Universal",
   "short_name": "San Pedro Route",
-  "description": "Versión móvil turbo para iOS y Android con mapa realista liviano, rutas y navegación.",
+  "description": "Versión con preferencia de captura de pestaña actual para grabación limpia.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
