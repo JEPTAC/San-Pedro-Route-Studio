@@ -1,4 +1,4 @@
-const CACHE_NAME = "san-pedro-route-mobile-v1";
+const CACHE_NAME = "san-pedro-route-universal-v1";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -21,16 +21,26 @@ self.addEventListener("activate", event => {
 });
 
 self.addEventListener("fetch", event => {
-  const request = event.request;
-  if (request.method !== "GET") return;
+  const req = event.request;
+  if (req.method !== "GET") return;
+
+  // No cacheamos tiles ni servicios externos de rutas para evitar datos viejos/pesados.
+  const url = new URL(req.url);
+  const isAppShell = url.origin === location.origin;
+
+  if (!isAppShell) {
+    event.respondWith(fetch(req).catch(() => caches.match("./index.html")));
+    return;
+  }
 
   event.respondWith(
-    caches.match(request).then(cached => {
-      if (cached) return cached;
-      return fetch(request).then(response => {
+    caches.match(req).then(cached => {
+      return cached || fetch(req).then(response => {
+        const copy = response.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(req, copy));
         return response;
       }).catch(() => {
-        if (request.mode === "navigate") return caches.match("./index.html");
+        if (req.mode === "navigate") return caches.match("./index.html");
       });
     })
   );

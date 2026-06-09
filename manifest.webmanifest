@@ -1,7 +1,7 @@
 {
-  "name": "San Pedro Route Studio",
+  "name": "San Pedro Route Studio Universal",
   "short_name": "San Pedro Route",
-  "description": "Versión móvil iOS y Android para recorridos en San Pedro, Valle del Cauca.",
+  "description": "App universal para computador, iOS y Android: mapa realista, rutas, navegación estilo Strava y exportación.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
